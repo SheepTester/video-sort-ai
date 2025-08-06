@@ -1,0 +1,31 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cargo install --git https://github.com/cross-rs/cross.git cross
+          cross build --release --target aarch64-linux-android
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            # Installation
+
+            ```sh
+            curl -L "https://github.com/SheepTester/video-sort-ai/releases/latest/download/video-sort" > video-sort
+            ```
+          files: target/aarch64-linux-android/release/video-sort
