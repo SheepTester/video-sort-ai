@@ -4,6 +4,7 @@ export type Video = {
   path: string;
   thumbnail_name: string;
   tags: string[];
+  note?: string;
 };
 export type State = {
   videos: Video[];
@@ -47,6 +48,27 @@ export const addTag = (video: Video, tag: string) =>
 
 export const removeTag = (video: Video, tag: string) =>
   editTag("remove", { thumbnail_name: video.thumbnail_name, tag_or_note: tag });
+
+export const setNote = (video: Video, note: string) =>
+  fetch(new URL(`/note/set`, ROOT), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      thumbnail_name: video.thumbnail_name,
+      tag_or_note: note,
+    } as VideoMetadataEditReq),
+  })
+    .then(
+      async (r): Promise<State | JsonError> =>
+        r.ok
+          ? r.json()
+          : Promise.reject(
+              new Error(`HTTP ${r.status} error: ${await r.text()}`)
+            )
+    )
+    .then((resp) =>
+      "error" in resp ? Promise.reject(new Error(resp.error)) : resp
+    );
 
 export const getVideoUrl = (video: Video) =>
   new URL(`/v/${encodeURIComponent(video.path)}`, ROOT);
