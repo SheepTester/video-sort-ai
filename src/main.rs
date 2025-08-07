@@ -32,7 +32,8 @@ use tokio_util::io::ReaderStream;
 const PORT: u16 = 8008;
 const DIR_PATH: &str = "./.video-sort";
 
-type MyResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+type BoxedError = Box<dyn std::error::Error + Send + Sync>;
+type MyResult<T> = Result<T, BoxedError>;
 type MyResponse = MyResult<Response<BoxBody<Bytes, std::io::Error>>>;
 type SharedState = Arc<RwLock<State>>;
 
@@ -151,14 +152,13 @@ async fn handle_request_wrapper(
     }
 }
 
-async fn start_server(state: State) -> MyResult<()> {
+async fn start_server(state: SharedState) -> MyResult<()> {
     let addr = SocketAddr::from(([0, 0, 0, 0], PORT));
     let listener = TcpListener::bind(addr).await?;
     eprintln!("http://localhost:{PORT}");
-    let sharable_state = Arc::new(RwLock::new(state));
 
     loop {
-        let state_clone = sharable_state.clone();
+        let state_clone = state.clone();
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
         tokio::task::spawn(async move {
@@ -184,47 +184,75 @@ async fn save_state(state: &State) -> MyResult<()> {
     Ok(())
 }
 
-async fn add_videos(path: &str, mut state: State) -> MyResult<()> {
+async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
     let mut entries = fs::read_dir(path).await?;
-    let mut found_videos = false;
-    while let Some(entry) = entries.next_entry().await? {
-        let path = entry.path();
-        if path.extension() == Some(&OsStr::new("mp4"))
-            && !state.videos.iter().any(|video| video.path == path)
-        {
-            println!("{:?}", entry.file_name());
-            found_videos = true;
-            let thumbnail_name = format!(
-                "{}.jpg",
-                sanitize_filename::sanitize(path.as_os_str().to_string_lossy())
-            );
-            let ffmpeg_result = Command::new("ffmpeg")
-                .arg("-i")
-                .arg(path.clone())
-                .arg("-frames")
-                .arg("1")
-                .arg("-vf")
-                .arg("scale=256:-1")
-                .arg("-q")
-                .arg("20") // lowest quality
-                .arg(format!("{DIR_PATH}/thumbs/{thumbnail_name}"))
-                .output()
-                .await?;
-            if !ffmpeg_result.status.success() {
-                eprintln!("Failed to create thumbnail.");
-                io::stderr().write_all(&ffmpeg_result.stderr).await?;
-                break;
+    let mut paths = Vec::new();
+    {
+        let videos = &state.read().await.videos;
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            if path.extension() == Some(&OsStr::new("mp4"))
+                && !videos.iter().any(|video| video.path == path)
+            {
+                paths.push(path);
             }
-            state.videos.push(Video {
-                path,
-                thumbnail_name,
-                tags: Vec::new(),
-            });
-            save_state(&state).await?;
         }
     }
 
-    if !found_videos {
+    let handles = paths
+        .iter()
+        .map(|path| {
+            let path = path.clone();
+            let path_clone = path.clone();
+            let state = state.clone();
+            let handle = tokio::spawn(async move {
+                let file_name = path
+                    .file_name()
+                    .map(|s| s.to_string_lossy())
+                    .unwrap_or_default();
+                let thumbnail_name = format!(
+                    "{}.jpg",
+                    sanitize_filename::sanitize(path.as_os_str().to_string_lossy())
+                );
+                let ffmpeg_result = Command::new("ffmpeg")
+                    .arg("-i")
+                    .arg(path.clone())
+                    .arg("-frames")
+                    .arg("1")
+                    .arg("-vf")
+                    .arg("scale=256:-1")
+                    .arg("-q")
+                    .arg("20") // lowest quality
+                    .arg(format!("{DIR_PATH}/thumbs/{thumbnail_name}"))
+                    .output()
+                    .await?;
+                if ffmpeg_result.status.success() {
+                    println!("{file_name}");
+                } else {
+                    eprintln!("Failed to create thumbnail for {file_name}.");
+                    io::stderr().write_all(&ffmpeg_result.stderr).await?;
+                }
+                {
+                    let mut state = state.write().await;
+                    state.videos.push(Video {
+                        path,
+                        thumbnail_name,
+                        tags: Vec::new(),
+                    });
+                }
+                save_state(&*state.read().await).await?;
+                Ok::<(), BoxedError>(())
+            });
+            (path_clone, handle)
+        })
+        .collect::<Vec<_>>();
+    for (path, handle) in handles {
+        if let Err(err) = handle.await {
+            eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
+        };
+    }
+
+    if paths.is_empty() {
         eprintln!("No new .mp4 files found in {path}.");
     }
 
@@ -239,6 +267,7 @@ async fn main() -> MyResult<()> {
         Err(err) if err.kind() == ErrorKind::NotFound => State { videos: Vec::new() },
         Err(err) => Err(err)?,
     };
+    let sharable_state = Arc::new(RwLock::new(state));
 
     let (program_name, command, add_path) = {
         let mut args = std::env::args();
@@ -252,14 +281,14 @@ async fn main() -> MyResult<()> {
     match command.as_deref() {
         None => {
             eprintln!("Tip: Run `{program_name} help` for a list of commands.");
-            start_server(state).await?;
+            start_server(sharable_state).await?;
         }
         Some("add") => {
             let Some(path) = add_path else {
                 eprintln!("Missing path: `{program_name} add <path>`");
                 exit(2);
             };
-            add_videos(&path, state).await?;
+            add_videos(&path, sharable_state).await?;
         }
         Some("help") => {
             eprintln!("Available commands:");
