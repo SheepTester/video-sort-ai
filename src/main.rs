@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
@@ -12,6 +13,7 @@ use http_body_util::Full;
 use http_body_util::StreamBody;
 use http_body_util::combinators::BoxBody;
 use hyper::Method;
+use hyper::body::Buf;
 use hyper::body::Bytes;
 use hyper::body::Frame;
 use hyper::server::conn::http1;
@@ -27,6 +29,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::process::Command;
 use tokio::sync::RwLock;
+use tokio::sync::Semaphore;
 use tokio_util::io::ReaderStream;
 
 const PORT: u16 = 8008;
@@ -41,12 +44,23 @@ type SharedState = Arc<RwLock<State>>;
 struct Video {
     path: PathBuf,
     thumbnail_name: String,
-    tags: Vec<String>,
+    tags: HashSet<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct State {
     videos: Vec<Video>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TagEditReq {
+    thumbnail_name: String,
+    tag: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct JsonError {
+    error: String,
 }
 
 fn escape_html(text: &str) -> String {
@@ -68,6 +82,17 @@ fn build_html_response(status: StatusCode, message: String) -> MyResponse {
         .status(status)
         .header("Content-Type", "text/html")
         .body(Full::from(message).map_err(|e| match e {}).boxed())?)
+}
+
+fn build_json_response<T: Serialize>(object: &T) -> MyResponse {
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "application/json")
+        .body(
+            Full::from(serde_json::to_string(object)?)
+                .map_err(|e| match e {})
+                .boxed(),
+        )?)
 }
 
 async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState) -> MyResponse {
@@ -104,6 +129,39 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     .map_err(|e| match e {})
                     .boxed(),
             )?),
+        (&Method::GET, "/list") => build_json_response(&*state.read().await),
+        (&Method::POST, path) if path == "/tag/add" || path == "/tag/remove" => {
+            let add = path == "/tag/add";
+            let request: TagEditReq =
+                serde_json::from_reader(req.collect().await?.aggregate().reader())?;
+            let success = {
+                let mut state = state.write().await;
+                let video = state
+                    .videos
+                    .iter_mut()
+                    .find(|video| video.thumbnail_name == request.thumbnail_name);
+                let success = video.is_some();
+                if let Some(video) = video {
+                    if add {
+                        video.tags.insert(request.tag);
+                    } else {
+                        video.tags.remove(&request.tag);
+                    }
+                }
+                success
+            };
+            if success {
+                save_state(&*state.read().await).await?;
+                build_json_response(&*state.read().await)
+            } else {
+                build_json_response(&JsonError {
+                    error: format!(
+                        "Unable to find video by thumbnail name {}",
+                        request.thumbnail_name
+                    ),
+                })
+            }
+        }
         (&Method::GET, path) if path.starts_with("/v/") => {
             let file = File::open(OsStr::from_bytes(&urlencoding::decode_binary(
                 &path.as_bytes()[3..],
@@ -184,6 +242,8 @@ async fn save_state(state: &State) -> MyResult<()> {
     Ok(())
 }
 
+const MAX_CONCURRENT_FFMPEG: usize = 10;
+
 async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
     let mut entries = fs::read_dir(path).await?;
     let mut paths = Vec::new();
@@ -199,13 +259,16 @@ async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
         }
     }
 
+    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FFMPEG));
     let handles = paths
         .iter()
         .map(|path| {
             let path = path.clone();
             let path_clone = path.clone();
             let state = state.clone();
+            let semaphore = semaphore.clone();
             let handle = tokio::spawn(async move {
+                let _ = semaphore.acquire_owned().await?;
                 let file_name = path
                     .file_name()
                     .map(|s| s.to_string_lossy())
@@ -237,7 +300,7 @@ async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     state.videos.push(Video {
                         path,
                         thumbnail_name,
-                        tags: Vec::new(),
+                        tags: HashSet::new(),
                     });
                 }
                 save_state(&*state.read().await).await?;
