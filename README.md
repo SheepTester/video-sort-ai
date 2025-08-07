@@ -72,11 +72,11 @@ I want a CLI program that starts an HTTP server. In the browser, it will list ev
 # install deps
 $ npm install
 
-# develop server
+# develop server (http://localhost:8008/)
 $ npm run client:build
 $ npx nodemon
 
-# develop client
+# develop client (http://127.0.0.1:8080/)
 $ npm run dev
 ```
 
