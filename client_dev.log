@@ -1,5 +1,0 @@
-
-> client:dev
-> esbuild --bundle client/index.tsx --outdir=src/static/ --define:ROOT='"http://localhost:8008/"' --servedir=src/static/ --sourcemap
-
-[serve] stopped automatically because stdin was closed (keep stdin open to continue serving)

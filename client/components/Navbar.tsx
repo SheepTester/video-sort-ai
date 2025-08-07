@@ -1,9 +1,8 @@
-import { Dispatch, SetStateAction } from "react";
 import { ViewMode } from "../App";
 
 type NavbarProps = {
   viewMode: ViewMode;
-  setViewMode: Dispatch<SetStateAction<ViewMode>>;
+  setViewMode: (viewMode: ViewMode) => void;
 };
 
 export function Navbar({ viewMode, setViewMode }: NavbarProps) {
