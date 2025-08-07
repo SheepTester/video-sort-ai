@@ -16,7 +16,7 @@ export function ListItem({ video }: ListItemProps) {
 
   const handleSaveNote = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const note = new FormData(e.currentTarget).get("note") as string;
+    const note = String(new FormData(e.currentTarget).get("note"));
     setNote(video, note).then((newState) => {
       setState(newState);
       setIsEditing(false);
