@@ -59,6 +59,12 @@ struct VideoMetadataEditReq {
     tag_or_note: String,
 }
 
+#[derive(Deserialize, Debug)]
+enum DeleteRequest {
+    Thumbnail(String),
+    Tag(String),
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct JsonError {
     error: String,
@@ -99,6 +105,13 @@ fn build_json_response<T: Serialize>(object: &T) -> MyResponse {
         )?)
 }
 
+fn build_no_content_response() -> MyResponse {
+    Ok(Response::builder()
+        .status(StatusCode::NO_CONTENT)
+        .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+        .body(Full::new(Bytes::new()).map_err(|e| match e {}).boxed())?)
+}
+
 async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState) -> MyResponse {
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => build_html_response(
@@ -133,6 +146,53 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     .boxed(),
             )?),
         (&Method::GET, "/list") => build_json_response(&*state.read().await),
+        (&Method::DELETE, "/delete") => {
+            let request: DeleteRequest =
+                serde_json::from_reader(req.collect().await?.aggregate().reader())?;
+            let mut state = state.write().await;
+            let original_len = state.videos.len();
+            let mut videos_to_delete = HashSet::new();
+            match &request {
+                DeleteRequest::Thumbnail(thumbnail_name) => {
+                    if let Some(video) = state
+                        .videos
+                        .iter()
+                        .find(|video| video.thumbnail_name == *thumbnail_name)
+                    {
+                        videos_to_delete.insert(video.thumbnail_name.clone());
+                    }
+                }
+                DeleteRequest::Tag(tag) => {
+                    for video in state
+                        .videos
+                        .iter()
+                        .filter(|video| video.tags.contains(tag))
+                    {
+                        videos_to_delete.insert(video.thumbnail_name.clone());
+                    }
+                }
+            }
+            if !videos_to_delete.is_empty() {
+                let (deleted_videos, remaining_videos): (Vec<Video>, Vec<Video>) = state
+                    .videos
+                    .drain(..)
+                    .partition(|video| videos_to_delete.contains(&video.thumbnail_name));
+                state.videos = remaining_videos;
+                for video in deleted_videos {
+                    if let Err(e) = fs::remove_file(&video.path).await {
+                        eprintln!("Failed to delete video file {:?}: {}", video.path, e);
+                    }
+                    let thumb_path = format!("{DIR_PATH}/thumbs/{}", video.thumbnail_name);
+                    if let Err(e) = fs::remove_file(&thumb_path).await {
+                        eprintln!("Failed to delete thumbnail file {}: {}", thumb_path, e);
+                    }
+                }
+            }
+            if state.videos.len() < original_len {
+                save_state(&state).await?;
+            }
+            build_no_content_response()
+        }
         (&Method::POST, path)
             if path == "/tag/add" || path == "/tag/remove" || path == "/editnote" =>
         {
@@ -376,6 +436,10 @@ async fn main() -> MyResult<()> {
             eprintln!("$ {program_name} add <path>");
             eprintln!("| Registers all .mp4 files in the given directory");
             eprintln!("| (shallow).");
+            eprintln!("$ curl -X DELETE -H \"Content-Type: application/json\" -d '{{\"Thumbnail\":\"...\"}}' http://127.0.0.1:8008/delete");
+            eprintln!("| Permanently deletes a video by its thumbnail name.");
+            eprintln!("$ curl -X DELETE -H \"Content-Type: application/json\" -d '{{\"Tag\":\"...\"}}' http://127.0.0.1:8008/delete");
+            eprintln!("| Permanently deletes all videos with the given tag.");
             eprintln!("$ {program_name} version");
             eprintln!("| Print the program version.");
             eprintln!("$ {program_name} help");
