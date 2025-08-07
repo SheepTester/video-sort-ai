@@ -1,14 +1,19 @@
 use std::ffi::OsStr;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
+use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::Arc;
 
+use futures_util::TryStreamExt;
 use http_body_util::BodyExt;
 use http_body_util::Full;
+use http_body_util::StreamBody;
 use http_body_util::combinators::BoxBody;
+use hyper::Method;
 use hyper::body::Bytes;
+use hyper::body::Frame;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Request, Response, StatusCode};
@@ -16,13 +21,16 @@ use hyper_util::rt::TokioIo;
 use serde::Deserialize;
 use serde::Serialize;
 use tokio::fs;
+use tokio::fs::File;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
+use tokio_util::io::ReaderStream;
 
 const PORT: u16 = 8008;
 const DIR_PATH: &str = "./.video-sort";
 
 type MyResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+type MyResponse = MyResult<Response<BoxBody<Bytes, std::io::Error>>>;
 type SharedState = Arc<RwLock<State>>;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -36,22 +44,92 @@ struct State {
     videos: Vec<Video>,
 }
 
-async fn handle_request(
+fn escape_html(text: &str) -> String {
+    text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+}
+
+fn build_text_response(status: StatusCode, message: String) -> MyResponse {
+    Ok(Response::builder()
+        .status(status)
+        .header("Content-Type", "text/plain")
+        .body(Full::from(message).map_err(|e| match e {}).boxed())?)
+}
+
+fn build_html_response(status: StatusCode, message: String) -> MyResponse {
+    Ok(Response::builder()
+        .status(status)
+        .header("Content-Type", "text/html")
+        .body(Full::from(message).map_err(|e| match e {}).boxed())?)
+}
+
+async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState) -> MyResponse {
+    match (req.method(), req.uri().path()) {
+        (&Method::GET, "/") => build_html_response(
+            StatusCode::OK,
+            include_str!("./static/index.html").replace(
+                "{v}",
+                &format!(
+                    "{} videos",
+                    state
+                        .read()
+                        .await
+                        .videos
+                        .iter()
+                        .map(|video| format!(
+                            "<a href=\"/v/{}\">{}</a><br>",
+                            urlencoding::encode_binary(video.path.as_os_str().as_encoded_bytes()),
+                            escape_html(
+                                &video.path.file_name().unwrap_or_default().to_string_lossy()
+                            )
+                        ))
+                        .collect::<Vec<_>>()
+                        .join("")
+                ),
+            ),
+        ),
+        (&Method::GET, "/favicon.ico") => Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "image/vnd.microsoft.icon")
+            .body(
+                Full::from(&include_bytes!("./static/favicon.ico")[..])
+                    .map_err(|e| match e {})
+                    .boxed(),
+            )?),
+        (&Method::GET, path) if path.starts_with("/v/") => {
+            let file = File::open(OsStr::from_bytes(&urlencoding::decode_binary(
+                &path.as_bytes()[3..],
+            )))
+            .await?;
+            let reader_stream = ReaderStream::new(file);
+            let stream_body = StreamBody::new(reader_stream.map_ok(Frame::data));
+            let boxed_body = BodyExt::boxed(stream_body);
+            Ok(Response::builder()
+                .status(StatusCode::OK)
+                .header("Content-Type", "video/mp4")
+                .body(boxed_body)?)
+        }
+        (&Method::GET, path) => build_html_response(
+            StatusCode::NOT_FOUND,
+            include_str!("./static/404.html").replace("{PATH}", &escape_html(path)),
+        ),
+        (method, path) => build_text_response(
+            StatusCode::METHOD_NOT_ALLOWED,
+            format!("Method {method} not supported at {path}."),
+        ),
+    }
+}
+
+async fn handle_request_wrapper(
     req: Request<hyper::body::Incoming>,
     state: SharedState,
-) -> MyResult<Response<BoxBody<Bytes, std::io::Error>>> {
-    Ok(Response::builder().status(StatusCode::OK).body(
-        Full::new(
-            include_str!("./index.html")
-                .replace(
-                    "{v}",
-                    &format!("{} videos", state.read().await.videos.len()),
-                )
-                .into(),
-        )
-        .map_err(|e| match e {})
-        .boxed(),
-    )?)
+) -> MyResponse {
+    match handle_request(req, state).await {
+        Err(err) => build_text_response(StatusCode::INTERNAL_SERVER_ERROR, format!("{err:?}")),
+        response => response,
+    }
 }
 
 async fn start_server(state: State) -> MyResult<()> {
@@ -68,7 +146,7 @@ async fn start_server(state: State) -> MyResult<()> {
             if let Err(err) = http1::Builder::new()
                 .serve_connection(
                     io,
-                    service_fn(move |req| handle_request(req, state_clone.clone())),
+                    service_fn(move |req| handle_request_wrapper(req, state_clone.clone())),
                 )
                 .await
             {
