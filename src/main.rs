@@ -40,7 +40,7 @@ type MyResult<T> = Result<T, BoxedError>;
 type MyResponse = MyResult<Response<BoxBody<Bytes, std::io::Error>>>;
 type SharedState = Arc<RwLock<State>>;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Video {
     path: PathBuf,
     thumbnail_name: String,
@@ -48,7 +48,7 @@ struct Video {
     note: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 struct State {
     videos: Vec<Video>,
 }
@@ -142,7 +142,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
         (&Method::DELETE, "/videos") => {
             let request: DeleteRequest =
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
-            let (deleted_videos, new_state) = {
+            let deleted_videos = {
                 let mut state = state.write().await;
                 let (deleted, remaining) =
                     state.videos.drain(..).partition(|video| match &request {
@@ -152,20 +152,16 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         DeleteRequest::Tag(tag) => video.tags.contains(tag),
                     });
                 state.videos = remaining;
-                (deleted, state.clone())
+                deleted
             };
             if !deleted_videos.is_empty() {
-                for video in deleted_videos {
+                for video in &deleted_videos {
                     let thumb_path = format!("{DIR_PATH}/thumbs/{}", video.thumbnail_name);
-                    if let Err(e) = fs::remove_file(&thumb_path).await {
-                        eprintln!("Failed to delete thumbnail file {}: {}", thumb_path, e);
-                    }
-                    if let Err(e) = fs::remove_file(&video.path).await {
-                        eprintln!("Failed to delete video file {:?}: {}", video.path, e);
-                    }
+                    fs::remove_file(&thumb_path).await?;
+                    fs::remove_file(&video.path).await?;
                     println!("D {:?}", video.path);
                 }
-                save_state(&new_state).await?;
+                save_state(&*state.read().await).await?;
             }
             Ok(Response::builder()
                 .status(StatusCode::NO_CONTENT)
