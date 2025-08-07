@@ -20,7 +20,7 @@ jobs:
           npm install
           npm run client:build
           echo -n "v$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)" > src/static/version.txt
-          cargo install --git https://github.com/cross-rs/cross.git cross
+          cargo install --git https://github.com/cross-rs/cross.git cross --rev e281947ca900da425e4ecea7483cfde646c8a1ea
           cross build --release --target aarch64-linux-android
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -32,4 +32,8 @@ jobs:
             curl -L "https://github.com/SheepTester/video-sort-ai/releases/latest/download/video-sort" > video-sort
             chmod +x video-sort
             ```
+
+            # What's changed?
+
+            no fucking clue
           files: target/aarch64-linux-android/release/video-sort

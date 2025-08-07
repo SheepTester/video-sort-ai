@@ -45,6 +45,7 @@ struct Video {
     path: PathBuf,
     thumbnail_name: String,
     tags: HashSet<String>,
+    note: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -53,9 +54,9 @@ struct State {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct TagEditReq {
+struct VideoMetadataEditReq {
     thumbnail_name: String,
-    tag: String,
+    tag_or_note: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -132,9 +133,11 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     .boxed(),
             )?),
         (&Method::GET, "/list") => build_json_response(&*state.read().await),
-        (&Method::POST, path) if path == "/tag/add" || path == "/tag/remove" => {
-            let add = path == "/tag/add";
-            let request: TagEditReq =
+        (&Method::POST, path)
+            if path == "/tag/add" || path == "/tag/remove" || path == "/editnote" =>
+        {
+            let path = String::from(path);
+            let request: VideoMetadataEditReq =
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
             let success = {
                 let mut state = state.write().await;
@@ -144,10 +147,15 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     .find(|video| video.thumbnail_name == request.thumbnail_name);
                 let success = video.is_some();
                 if let Some(video) = video {
-                    if add {
-                        video.tags.insert(request.tag);
-                    } else {
-                        video.tags.remove(&request.tag);
+                    match path.as_str() {
+                        "/tag/add" => {
+                            video.tags.insert(request.tag_or_note);
+                        }
+                        "/tag/remove" => {
+                            video.tags.remove(&request.tag_or_note);
+                        }
+                        "/editnote" => video.note = request.tag_or_note,
+                        _ => {}
                     }
                 }
                 success
@@ -305,6 +313,7 @@ async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                         path,
                         thumbnail_name,
                         tags: HashSet::new(),
+                        note: String::new(),
                     });
                 }
                 save_state(&*state.read().await).await?;

@@ -8,9 +8,9 @@ export type Video = {
 export type State = {
   videos: Video;
 };
-export type TagEditReq = {
+export type VideoMetadataEditReq = {
   thumbnail_name: string;
-  tag: string;
+  tag_or_note: string;
 };
 export type JsonError = {
   error: string;
@@ -24,7 +24,7 @@ export const getList = () =>
         : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
   );
 
-const editTag = (op: "add" | "remove", req: TagEditReq) =>
+const editTag = (op: "add" | "remove", req: VideoMetadataEditReq) =>
   fetch(new URL(`/tag/${op}`, ROOT), {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -43,10 +43,10 @@ const editTag = (op: "add" | "remove", req: TagEditReq) =>
     );
 
 export const addTag = (video: Video, tag: string) =>
-  editTag("add", { thumbnail_name: video.thumbnail_name, tag });
+  editTag("add", { thumbnail_name: video.thumbnail_name, tag_or_note: tag });
 
 export const removeTag = (video: Video, tag: string) =>
-  editTag("remove", { thumbnail_name: video.thumbnail_name, tag });
+  editTag("remove", { thumbnail_name: video.thumbnail_name, tag_or_note: tag });
 
 export const getVideoUrl = (video: Video) =>
   new URL(`/v/${encodeURIComponent(video.path)}`, ROOT);
