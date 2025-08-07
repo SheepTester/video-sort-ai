@@ -1,0 +1,8 @@
+
+> serve
+> cargo run
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.21s
+     Running `target/debug/video-sort`
+Tip: Run `target/debug/video-sort help` for a list of commands.
+http://localhost:8008

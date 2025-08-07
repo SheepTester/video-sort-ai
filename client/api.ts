@@ -6,7 +6,7 @@ export type Video = {
   tags: string[];
 };
 export type State = {
-  videos: Video;
+  videos: Video[];
 };
 export type VideoMetadataEditReq = {
   thumbnail_name: string;
