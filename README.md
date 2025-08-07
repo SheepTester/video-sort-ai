@@ -19,8 +19,14 @@ You also need `ffmpeg` on your `PATH`.
 Then, run
 
 ```sh
+# Add videos
+./video-sort add storage/dcim/Camera/
+
+# Start server
 ./video-sort
 ```
+
+And go to http://localhost:8008/
 
 ## Why
 
@@ -72,6 +78,9 @@ I want a CLI program that starts an HTTP server. In the browser, it will list ev
 ```shell
 # install deps
 $ npm install
+
+# add videos
+$ cargo run -- add /mnt/c/Users/seyen/Videos/Screen\ Recordings/
 
 # develop server (http://localhost:8008/)
 $ npm run client:build
