@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { getList, State } from "./api";
 import { GridView } from "./components/GridView";
 import { ListView } from "./components/ListView";
-import { Navbar } from "./components/Navbar";
-import { StateProvider } from "./state";
 import { FeedView } from "./components/FeedView";
+import { Navbar } from "./components/Navbar";
+import { SetStateContext } from "./state";
 
 export type ViewMode =
   | { mode: "list" }
@@ -47,8 +47,8 @@ export function App() {
   }
 
   return (
-    <StateProvider setState={setState}>
+    <SetStateContext.Provider value={setState}>
       <AppInner state={state} />
-    </StateProvider>
+    </SetStateContext.Provider>
   );
 }

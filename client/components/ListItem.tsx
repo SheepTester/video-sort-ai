@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import { getThumbnailUrl, setNote, Video } from "../api";
 import { useSetState } from "../state";
+
+function extractFilename(path: string) {
+  return path.split("/").pop() || path;
+}
 
 type ListItemProps = {
   video: Video;
@@ -8,22 +12,19 @@ type ListItemProps = {
 
 export function ListItem({ video }: ListItemProps) {
   const setState = useSetState();
-  const [note, setLocalNote] = useState(video.note);
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleSaveNote = () => {
+  const handleSaveNote = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const note = new FormData(e.currentTarget).get("note") as string;
     setNote(video, note).then((newState) => {
       setState(newState);
       setIsEditing(false);
     });
   };
 
-  const extractFilename = (path: string) => {
-    return path.split("/").pop() || path;
-  };
-
-  const handleCopyFilename = () => {
-    navigator.clipboard.writeText(extractFilename(video.path));
+  const handleCopyFilename = async () => {
+    await navigator.clipboard.writeText(extractFilename(video.path));
   };
 
   return (
@@ -45,14 +46,18 @@ export function ListItem({ video }: ListItemProps) {
         </div>
         <div className="list-item-note">
           {isEditing ? (
-            <>
-              <textarea
-                value={note}
-                onChange={(e) => setLocalNote(e.target.value)}
+            <form onSubmit={handleSaveNote}>
+              <input
+                type="text"
+                name="note"
+                defaultValue={video.note}
+                autoFocus
               />
-              <button onClick={handleSaveNote}>Save</button>
-              <button onClick={() => setIsEditing(false)}>Cancel</button>
-            </>
+              <button type="submit">Save</button>
+              <button type="button" onClick={() => setIsEditing(false)}>
+                Cancel
+              </button>
+            </form>
           ) : (
             <>
               <p>{video.note || "No note."}</p>

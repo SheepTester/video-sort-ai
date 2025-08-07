@@ -92,14 +92,8 @@ body {
   font-size: 12px;
 }
 
-.list-item-note textarea {
-  width: 100%;
-  min-height: 60px;
-}
-
-.list-item-note button {
-  margin-top: 4px;
-  margin-right: 4px;
+.list-item-note input {
+  margin-right: 8px;
 }
 
 .feed-view {
