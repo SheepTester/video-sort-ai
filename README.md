@@ -69,7 +69,15 @@ I want a CLI program that starts an HTTP server. In the browser, it will list ev
 ## Development
 
 ```shell
+# install deps
+$ npm install
+
+# develop server
+$ npm run client:build
 $ npx nodemon
+
+# develop client
+$ npm run dev
 ```
 
 ```shell

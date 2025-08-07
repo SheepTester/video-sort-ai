@@ -74,6 +74,7 @@ fn build_text_response(status: StatusCode, message: String) -> MyResponse {
     Ok(Response::builder()
         .status(status)
         .header("Content-Type", "text/plain")
+        .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
         .body(Full::from(message).map_err(|e| match e {}).boxed())?)
 }
 
@@ -81,6 +82,7 @@ fn build_html_response(status: StatusCode, message: String) -> MyResponse {
     Ok(Response::builder()
         .status(status)
         .header("Content-Type", "text/html")
+        .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
         .body(Full::from(message).map_err(|e| match e {}).boxed())?)
 }
 
@@ -88,6 +90,7 @@ fn build_json_response<T: Serialize>(object: &T) -> MyResponse {
     Ok(Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/json")
+        .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
         .body(
             Full::from(serde_json::to_string(object)?)
                 .map_err(|e| match e {})
@@ -99,31 +102,30 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => build_html_response(
             StatusCode::OK,
-            include_str!("./static/index.html").replace(
-                "{v}",
-                &format!(
-                    "{} videos",
-                    state
-                        .read()
-                        .await
-                        .videos
-                        .iter()
-                        .map(|video| format!(
-                            "<a href=\"/v/{}\"><img src=\"/t/{}\">{}</a><br>",
-                            urlencoding::encode_binary(video.path.as_os_str().as_encoded_bytes()),
-                            urlencoding::encode(&video.thumbnail_name),
-                            escape_html(
-                                &video.path.file_name().unwrap_or_default().to_string_lossy()
-                            )
-                        ))
-                        .collect::<Vec<_>>()
-                        .join("")
-                ),
-            ),
+            String::from(include_str!("./static/index.html")),
         ),
+        (&Method::GET, "/index.css") => Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "text/css")
+            .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+            .body(
+                Full::from(&include_bytes!("./static/index.css")[..])
+                    .map_err(|e| match e {})
+                    .boxed(),
+            )?),
+        (&Method::GET, "/index.js") => Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "text/javascript")
+            .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+            .body(
+                Full::from(&include_bytes!("./static/index.js")[..])
+                    .map_err(|e| match e {})
+                    .boxed(),
+            )?),
         (&Method::GET, "/favicon.ico") => Ok(Response::builder()
             .status(StatusCode::OK)
             .header("Content-Type", "image/vnd.microsoft.icon")
+            .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
             .body(
                 Full::from(&include_bytes!("./static/favicon.ico")[..])
                     .map_err(|e| match e {})
@@ -173,6 +175,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-Type", "video/mp4")
+                .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
                 .body(boxed_body)?)
         }
         (&Method::GET, path) if path.starts_with("/t/") => {
@@ -187,6 +190,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-Type", "image/jpeg")
+                .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
                 .body(boxed_body)?)
         }
         (&Method::GET, path) => build_html_response(

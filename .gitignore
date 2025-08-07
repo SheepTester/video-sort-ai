@@ -1,3 +1,5 @@
 /target/
 /node_modules/
 /.video-sort/
+/src/static/index.css
+/src/static/index.js
