@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         run: |
+          echo -n "v$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)" > src/static/version.txt
           cargo install --git https://github.com/cross-rs/cross.git cross
           cross build --release --target aarch64-linux-android
       - name: Release
@@ -27,5 +28,6 @@ jobs:
 
             ```sh
             curl -L "https://github.com/SheepTester/video-sort-ai/releases/latest/download/video-sort" > video-sort
+            chmod +x video-sort
             ```
           files: target/aarch64-linux-android/release/video-sort

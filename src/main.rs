@@ -290,12 +290,18 @@ async fn main() -> MyResult<()> {
             };
             add_videos(&path, sharable_state).await?;
         }
+        Some("version") => {
+            println!("{}", include_str!("./static/version.txt"));
+        }
         Some("help") => {
             eprintln!("Available commands:");
             eprintln!("$ {program_name}");
             eprintln!("| Start the web server.");
             eprintln!("$ {program_name} add <path>");
-            eprintln!("| Registers all .mp4 files in the given directory (shallow).");
+            eprintln!("| Registers all .mp4 files in the given directory");
+            eprintln!("| (shallow).");
+            eprintln!("$ {program_name} version");
+            eprintln!("| Print the program version.");
             eprintln!("$ {program_name} help");
             eprintln!("| Display this list.");
         }
