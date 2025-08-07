@@ -38,46 +38,6 @@ body {
   object-fit: cover;
 }
 
-.feed-view {
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  padding-top: 8px;
-}
-
-.feed-item {
-  position: relative;
-  width: 100%;
-  height: 0;
-  overflow: hidden;
-  margin-bottom: 16px;
-  border-radius: 8px;
-  background-color: #000;
-}
-
-.feed-thumbnail {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.feed-video {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-}
-
-.feed-video.visible {
-  opacity: 1;
-}
-
 .list-view {
   padding: 8px;
 }
@@ -140,4 +100,31 @@ body {
 .list-item-note button {
   margin-top: 4px;
   margin-right: 4px;
+}
+
+.feed-view {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding-top: 8px;
+}
+
+.feed-item {
+  position: relative;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.feed-thumbnail {
+  width: 100%;
+  display: block;
+}
+
+.feed-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }

@@ -4,7 +4,7 @@ export type Video = {
   path: string;
   thumbnail_name: string;
   tags: string[];
-  note?: string;
+  note: string;
 };
 export type State = {
   videos: Video[];
@@ -25,8 +25,8 @@ export const getList = () =>
         : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
   );
 
-const editTag = (op: "add" | "remove", req: VideoMetadataEditReq) =>
-  fetch(new URL(`/tag/${op}`, ROOT), {
+const editMetadata = (path: string, req: VideoMetadataEditReq) =>
+  fetch(new URL(path, ROOT), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(req),
@@ -44,31 +44,22 @@ const editTag = (op: "add" | "remove", req: VideoMetadataEditReq) =>
     );
 
 export const addTag = (video: Video, tag: string) =>
-  editTag("add", { thumbnail_name: video.thumbnail_name, tag_or_note: tag });
+  editMetadata("/tag/add", {
+    thumbnail_name: video.thumbnail_name,
+    tag_or_note: tag,
+  });
 
 export const removeTag = (video: Video, tag: string) =>
-  editTag("remove", { thumbnail_name: video.thumbnail_name, tag_or_note: tag });
+  editMetadata("/tag/remove", {
+    thumbnail_name: video.thumbnail_name,
+    tag_or_note: tag,
+  });
 
 export const setNote = (video: Video, note: string) =>
-  fetch(new URL(`/note/set`, ROOT), {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      thumbnail_name: video.thumbnail_name,
-      tag_or_note: note,
-    } as VideoMetadataEditReq),
-  })
-    .then(
-      async (r): Promise<State | JsonError> =>
-        r.ok
-          ? r.json()
-          : Promise.reject(
-              new Error(`HTTP ${r.status} error: ${await r.text()}`)
-            )
-    )
-    .then((resp) =>
-      "error" in resp ? Promise.reject(new Error(resp.error)) : resp
-    );
+  editMetadata("/editnote", {
+    thumbnail_name: video.thumbnail_name,
+    tag_or_note: note,
+  });
 
 export const getVideoUrl = (video: Video) =>
   new URL(`/v/${encodeURIComponent(video.path)}`, ROOT);
