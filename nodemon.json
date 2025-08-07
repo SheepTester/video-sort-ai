@@ -1,0 +1,5 @@
+{
+  "watch": ["src", "Cargo.toml"],
+  "ext": "*",
+  "exec": "cargo run"
+}

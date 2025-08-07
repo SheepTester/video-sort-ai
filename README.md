@@ -39,6 +39,14 @@ blah blah blah
 
 Another issue is that on TikTok, they use a custom video selector that has all videos together in one stream, most recent first. So I have to sort videos from most recent to earliest, which is fine I guess.
 
+---
+
+So basically, I have to use the Files app to see a stream of videos on device. It's decent, but also not.
+
+- If I want to delete a file, trashing it doesn't immediately delete it, adding another step. And it's slow.
+- Also oftentimes I don't want to delete a file right away, just mark it for deletion. Just in case I change my mind.
+- I want to categorize the videos first before uploading/deleting them. Less context switching.
+
 </details>
 
 ### Why Rust?
@@ -53,15 +61,18 @@ I want a CLI program that starts an HTTP server. In the browser, it will list ev
 
 - You can preview each video in the browser, then assign it lightweight tags and notes.
 - I might need to generate thumbnails for every video with `ffmpeg` (which I think I have installed on my phone).
-- There should be an option to permanently delete off of my phone by tag (or select an individual video).
-- There should be an option to move a video between Termux storage and the Downloads folder.
+- There should be an option to permanently videos individually or by tag.
+- There should be an option to move videos between Termux storage and the Downloads folder by tag.
   - `termux-media-scan` will make the video visible to Android again.
 - Dark theme.
 
 ## Development
 
 ```shell
+$ npx nodemon
+```
+
+```shell
 # Create a tag
-$ git tag -a "$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)"
-$ git push --tags
+$ V="$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)" && git tag -a "v$V" -m "version numero $V" && git push --tags
 ```
