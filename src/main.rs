@@ -22,7 +22,10 @@ use serde::Deserialize;
 use serde::Serialize;
 use tokio::fs;
 use tokio::fs::File;
+use tokio::io;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
+use tokio::process::Command;
 use tokio::sync::RwLock;
 use tokio_util::io::ReaderStream;
 
@@ -36,6 +39,7 @@ type SharedState = Arc<RwLock<State>>;
 #[derive(Serialize, Deserialize, Debug)]
 struct Video {
     path: PathBuf,
+    thumbnail_name: String,
     tags: Vec<String>,
 }
 
@@ -79,8 +83,9 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         .videos
                         .iter()
                         .map(|video| format!(
-                            "<a href=\"/v/{}\">{}</a><br>",
+                            "<a href=\"/v/{}\"><img src=\"/t/{}\">{}</a><br>",
                             urlencoding::encode_binary(video.path.as_os_str().as_encoded_bytes()),
+                            urlencoding::encode(&video.thumbnail_name),
                             escape_html(
                                 &video.path.file_name().unwrap_or_default().to_string_lossy()
                             )
@@ -109,6 +114,20 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-Type", "video/mp4")
+                .body(boxed_body)?)
+        }
+        (&Method::GET, path) if path.starts_with("/t/") => {
+            let file = File::open(format!(
+                "{DIR_PATH}/thumbs/{}",
+                urlencoding::decode(&path[3..])?
+            ))
+            .await?;
+            let reader_stream = ReaderStream::new(file);
+            let stream_body = StreamBody::new(reader_stream.map_ok(Frame::data));
+            let boxed_body = BodyExt::boxed(stream_body);
+            Ok(Response::builder()
+                .status(StatusCode::OK)
+                .header("Content-Type", "image/jpeg")
                 .body(boxed_body)?)
         }
         (&Method::GET, path) => build_html_response(
@@ -175,16 +194,37 @@ async fn add_videos(path: &str, mut state: State) -> MyResult<()> {
         {
             println!("{:?}", entry.file_name());
             found_videos = true;
+            let thumbnail_name = format!(
+                "{}.jpg",
+                sanitize_filename::sanitize(path.as_os_str().to_string_lossy())
+            );
+            let ffmpeg_result = Command::new("ffmpeg")
+                .arg("-i")
+                .arg(path.clone())
+                .arg("-frames")
+                .arg("1")
+                .arg("-vf")
+                .arg("scale=256:-1")
+                .arg("-q")
+                .arg("20") // lowest quality
+                .arg(format!("{DIR_PATH}/thumbs/{thumbnail_name}"))
+                .output()
+                .await?;
+            if !ffmpeg_result.status.success() {
+                eprintln!("Failed to create thumbnail.");
+                io::stderr().write_all(&ffmpeg_result.stderr).await?;
+                break;
+            }
             state.videos.push(Video {
                 path,
+                thumbnail_name,
                 tags: Vec::new(),
             });
+            save_state(&state).await?;
         }
     }
 
-    if found_videos {
-        save_state(&state).await?;
-    } else {
+    if !found_videos {
         eprintln!("No new .mp4 files found in {path}.");
     }
 
@@ -193,7 +233,7 @@ async fn add_videos(path: &str, mut state: State) -> MyResult<()> {
 
 #[tokio::main]
 async fn main() -> MyResult<()> {
-    fs::create_dir_all(DIR_PATH).await?;
+    fs::create_dir_all(format!("{DIR_PATH}/thumbs/")).await?;
     let state = match fs::read_to_string(format!("{DIR_PATH}/state.json")).await {
         Ok(json) => serde_json::from_str(&json)?,
         Err(err) if err.kind() == ErrorKind::NotFound => State { videos: Vec::new() },
