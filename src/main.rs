@@ -59,6 +59,12 @@ struct VideoMetadataEditReq {
     tag_or_note: String,
 }
 
+#[derive(Deserialize, Debug)]
+enum DeleteRequest {
+    Thumbnail(String),
+    Tag(String),
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct JsonError {
     error: String,
@@ -133,6 +139,35 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     .boxed(),
             )?),
         (&Method::GET, "/list") => build_json_response(&*state.read().await),
+        (&Method::DELETE, "/videos") => {
+            let request: DeleteRequest =
+                serde_json::from_reader(req.collect().await?.aggregate().reader())?;
+            let deleted_videos = {
+                let mut state = state.write().await;
+                let (deleted, remaining) =
+                    state.videos.drain(..).partition(|video| match &request {
+                        DeleteRequest::Thumbnail(thumbnail_name) => {
+                            video.thumbnail_name == *thumbnail_name
+                        }
+                        DeleteRequest::Tag(tag) => video.tags.contains(tag),
+                    });
+                state.videos = remaining;
+                deleted
+            };
+            if !deleted_videos.is_empty() {
+                for video in &deleted_videos {
+                    let thumb_path = format!("{DIR_PATH}/thumbs/{}", video.thumbnail_name);
+                    fs::remove_file(&thumb_path).await?;
+                    fs::remove_file(&video.path).await?;
+                    println!("D {:?}", video.path);
+                }
+                save_state(&*state.read().await).await?;
+            }
+            Ok(Response::builder()
+                .status(StatusCode::NO_CONTENT)
+                .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+                .body(Full::new(Bytes::new()).map_err(|e| match e {}).boxed())?)
+        }
         (&Method::POST, path)
             if path == "/tag/add" || path == "/tag/remove" || path == "/editnote" =>
         {
