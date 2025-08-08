@@ -1,4 +1,4 @@
-name: Release
+name: Push Tag
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ jobs:
 
       - name: Check and update version
         run: |
-          CURRENT_VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f 2)
+          CURRENT_VERSION=$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)
           if [ "$CURRENT_VERSION" != "${{ github.event.inputs.version }}" ]; then
             sed -i "s/^version = .*/version = \"${{ github.event.inputs.version }}\"/" Cargo.toml
             git config --global user.name 'github-actions[bot]'
