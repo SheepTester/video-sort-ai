@@ -1,6 +1,7 @@
 :root {
   color-scheme: dark;
   scroll-snap-type: y mandatory;
+  scroll-padding-top: 60px;
 }
 body {
   margin: 0;
@@ -179,9 +180,12 @@ button:not(:disabled) {
 
 .feed-item {
   position: relative;
-  height: calc(100vh - 60px);
+  height: calc(100svh - 60px);
   overflow: hidden;
-  scroll-snap-align: end;
+  scroll-snap-align: start;
+  box-sizing: border-box;
+  /* for android home button */
+  padding-bottom: 20px;
 }
 
 .feed-video {
@@ -209,6 +213,9 @@ button:not(:disabled) {
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
+  /* for android home button */
+  padding-bottom: 20px;
+  box-sizing: border-box;
 }
 .modal[open] {
   visibility: visible;
