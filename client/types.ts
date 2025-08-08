@@ -1,7 +1,7 @@
 export type ViewMode =
   | { mode: "list" }
   | { mode: "feed" }
-  | { mode: "grid"; columns: number };
+  | { mode: "grid" };
 export type Filter =
   | { mode: "none" }
   | { mode: "tagless" }
