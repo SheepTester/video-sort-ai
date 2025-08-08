@@ -16,57 +16,79 @@ export function Navbar({
   onFilter,
   tags,
 }: NavbarProps) {
+  const columnsId = useId();
   return (
-    <div className="navbar">
-      <button
-        onClick={() => onViewMode({ mode: "list" })}
-        disabled={viewMode.mode === "list"}
-      >
-        Li
-      </button>
-      <button
-        onClick={() => onViewMode({ mode: "feed" })}
-        disabled={viewMode.mode === "feed"}
-      >
-        FY
-      </button>
-      {([2, 3, 4, 5] as const).map((columns) => (
+    <>
+      <div className="navbar">
         <button
-          key={columns}
-          onClick={() => onViewMode({ mode: "grid", columns })}
-          disabled={viewMode.mode === "grid" && viewMode.columns === columns}
+          onClick={() => onViewMode({ mode: "list" })}
+          disabled={viewMode.mode === "list"}
         >
-          {columns}
+          Li
         </button>
-      ))}
-      <select
-        value={
-          filter.mode === "with-tag" ? `with-tag:${filter.tag}` : filter.mode
-        }
-        onChange={(e) =>
-          onFilter(
-            e.currentTarget.value === "none" ||
-              e.currentTarget.value === "tagless"
-              ? { mode: e.currentTarget.value }
-              : {
-                  mode: "with-tag",
-                  tag: e.currentTarget.value.replace("with-tag:", ""),
-                }
-          )
-        }
-      >
-        <option value="none">Default</option>
-        <option value="tagless">No tags</option>
-        <hr />
-        {tags.map((tag) => (
-          <option value={`with-tag:${tag}`} key={tag}>
-            {tag}
-          </option>
-        ))}
-        {filter.mode === "with-tag" && !tags.includes(filter.tag) ? (
-          <option value={`with-tag:${filter.tag}`}>{filter.tag}</option>
-        ) : null}
-      </select>
-    </div>
+        <button
+          onClick={() => onViewMode({ mode: "feed" })}
+          disabled={viewMode.mode === "feed"}
+        >
+          FY
+        </button>
+        <button
+          onClick={() =>
+            onViewMode({
+              mode: "grid",
+              columns: viewMode.mode === "grid" ? viewMode.columns : 5,
+            })
+          }
+          disabled={viewMode.mode === "grid"}
+        >
+          Grid
+        </button>
+        <select
+          value={
+            filter.mode === "with-tag" ? `with-tag:${filter.tag}` : filter.mode
+          }
+          onChange={(e) =>
+            onFilter(
+              e.currentTarget.value === "none" ||
+                e.currentTarget.value === "tagless"
+                ? { mode: e.currentTarget.value }
+                : {
+                    mode: "with-tag",
+                    tag: e.currentTarget.value.replace("with-tag:", ""),
+                  }
+            )
+          }
+        >
+          <option value="none">Default</option>
+          <option value="tagless">No tags</option>
+          <hr />
+          {tags.map((tag) => (
+            <option value={`with-tag:${tag}`} key={tag}>
+              {tag}
+            </option>
+          ))}
+          {filter.mode === "with-tag" && !tags.includes(filter.tag) ? (
+            <option value={`with-tag:${filter.tag}`}>{filter.tag}</option>
+          ) : null}
+        </select>
+      </div>
+      {viewMode.mode === "grid" ? (
+        <div className="navbar">
+          <label htmlFor={columnsId}>Columns</label>
+          <input
+            type="range"
+            min={1}
+            max={10}
+            value={viewMode.columns}
+            onChange={(e) =>
+              onViewMode({
+                mode: "grid",
+                columns: e.currentTarget.valueAsNumber,
+              })
+            }
+          />
+        </div>
+      ) : null}
+    </>
   );
 }

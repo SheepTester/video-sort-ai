@@ -2,7 +2,7 @@ import { getThumbnailUrl, Video } from "../api";
 import { useVideoContext } from "../contexts/video";
 
 type GridViewProps = {
-  columns: 2 | 3 | 4 | 5;
+  columns: number;
   videos: Video[];
 };
 
