@@ -7,10 +7,17 @@ type GridViewProps = {
 
 export function GridView({ columns, videos }: GridViewProps) {
   return (
-    <div className="grid-view" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+    <div
+      className="grid-view"
+      style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+    >
       {videos.map((video) => (
         <div key={video.path} className="thumbnail">
-          <img src={getThumbnailUrl(video).toString()} alt={video.path} />
+          <img
+            src={getThumbnailUrl(video).toString()}
+            alt={video.path}
+            loading="lazy"
+          />
         </div>
       ))}
     </div>

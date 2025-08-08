@@ -6,6 +6,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures_util::TryStreamExt;
 use http_body_util::BodyExt;
@@ -30,11 +31,13 @@ use tokio::net::TcpListener;
 use tokio::process::Command;
 use tokio::sync::RwLock;
 use tokio::sync::Semaphore;
+use tokio::time::sleep;
 use tokio_util::io::ReaderStream;
 
 const PORT: u16 = 8008;
 const DIR_PATH: &str = "./.video-sort";
 const CORS: &str = "http://127.0.0.1:8000";
+const MAX_CONCURRENT_FFMPEG: usize = 10;
 
 type BoxedError = Box<dyn std::error::Error + Send + Sync>;
 type MyResult<T> = Result<T, BoxedError>;
@@ -226,6 +229,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 .status(StatusCode::OK)
                 .header("Content-Type", "video/mp4")
                 .header("Access-Control-Allow-Origin", CORS)
+                .header("Cache-Control", "public, max-age=604800")
                 .body(boxed_body)?)
         }
         (&Method::GET, path) if path.starts_with("/t/") => {
@@ -241,6 +245,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 .status(StatusCode::OK)
                 .header("Content-Type", "image/jpeg")
                 .header("Access-Control-Allow-Origin", CORS)
+                .header("Cache-Control", "public, max-age=604800")
                 .body(boxed_body)?)
         }
         (&Method::GET, path) => build_html_response(
@@ -296,8 +301,6 @@ async fn save_state(state: &State) -> MyResult<()> {
     Ok(())
 }
 
-const MAX_CONCURRENT_FFMPEG: usize = 10;
-
 async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
     let mut entries = fs::read_dir(path).await?;
     let mut paths = Vec::new();
@@ -322,7 +325,8 @@ async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
             let state = state.clone();
             let semaphore = semaphore.clone();
             let handle = tokio::spawn(async move {
-                let _ = semaphore.acquire_owned().await?;
+                // _ will immediately drop the permit
+                let _permit = semaphore.acquire_owned().await?;
                 let file_name = path
                     .file_name()
                     .map(|s| s.to_string_lossy())
@@ -331,6 +335,7 @@ async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     "{}.jpg",
                     sanitize_filename::sanitize(path.as_os_str().to_string_lossy())
                 );
+                eprintln!("Creating thumbnail for {file_name}...");
                 let ffmpeg_result = Command::new("ffmpeg")
                     .arg("-i")
                     .arg(path.clone())
@@ -344,7 +349,7 @@ async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     .output()
                     .await?;
                 if ffmpeg_result.status.success() {
-                    println!("{file_name}");
+                    println!("+ {file_name}");
                 } else {
                     eprintln!("Failed to create thumbnail for {file_name}.");
                     io::stderr().write_all(&ffmpeg_result.stderr).await?;
@@ -372,6 +377,8 @@ async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
 
     if paths.is_empty() {
         eprintln!("No new .mp4 files found in {path}.");
+    } else {
+        eprintln!("Done.");
     }
 
     Ok(())

@@ -7,13 +7,17 @@ type FeedItemProps = {
 
 export function FeedItem({ video }: FeedItemProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [isIntersecting, setIsIntersecting] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (!ref.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsIntersecting(entry.isIntersecting);
+        if (entry.isIntersecting) {
+          videoRef.current?.play();
+        } else {
+          videoRef.current?.pause();
+        }
       },
       { threshold: 0.5 }
     );
@@ -26,20 +30,15 @@ export function FeedItem({ video }: FeedItemProps) {
 
   return (
     <div ref={ref} className="feed-item">
-      <img
-        src={thumbnailUrl.toString()}
-        alt={video.path}
-        className="feed-thumbnail"
+      <video
+        className="feed-video"
+        src={videoUrl.toString()}
+        controls
+        loop
+        poster={thumbnailUrl.toString()}
+        preload="none"
+        ref={videoRef}
       />
-      {isIntersecting && (
-        <video
-          className="feed-video"
-          src={videoUrl.toString()}
-          controls
-          autoPlay
-          loop
-        />
-      )}
     </div>
   );
 }

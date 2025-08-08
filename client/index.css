@@ -1,5 +1,6 @@
 :root {
   color-scheme: dark;
+  scroll-snap-type: y mandatory;
 }
 body {
   margin: 0;
@@ -9,11 +10,17 @@ body {
   display: flex;
   padding: 8px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  box-sizing: border-box;
+  height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: Canvas;
 }
 
 .navbar button {
   margin-right: 8px;
-  padding: 4px 8px;
+  padding: 4px 16px;
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   background: Canvas;
   cursor: pointer;
@@ -26,8 +33,6 @@ body {
 
 .grid-view {
   display: grid;
-  gap: 8px;
-  padding: 8px;
 }
 
 .thumbnail {
@@ -112,20 +117,12 @@ body {
 
 .feed-item {
   position: relative;
-  margin-bottom: 16px;
-  border-radius: 8px;
+  height: calc(100vh - 60px);
   overflow: hidden;
-}
-
-.feed-thumbnail {
-  width: 100%;
-  display: block;
+  scroll-snap-align: end;
 }
 
 .feed-video {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
 }

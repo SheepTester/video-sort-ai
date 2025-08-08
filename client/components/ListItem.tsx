@@ -30,7 +30,11 @@ export function ListItem({ video }: ListItemProps) {
   return (
     <div className="list-item">
       <div className="list-item-thumbnail">
-        <img src={getThumbnailUrl(video).toString()} alt={video.path} />
+        <img
+          src={getThumbnailUrl(video).toString()}
+          alt={video.path}
+          loading="lazy"
+        />
       </div>
       <div className="list-item-info">
         <div className="list-item-filename">
