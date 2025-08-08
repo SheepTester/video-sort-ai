@@ -62,17 +62,17 @@ async fn main() -> MyResult<()> {
 
     match command.as_deref() {
         None => {
+            eprintln!("Video Sort {}", include_str!("./static/version.txt"));
             {
-                let state = sharable_state.read().await;
-                let video_count = state.videos.len();
-                let total_size: u64 = state.videos.iter().map(|v| v.size).sum();
-                eprintln!("Video Sort {}", include_str!("./static/version.txt"));
+                let videos = &sharable_state.read().await.videos;
+                let video_count = videos.len();
+                let total_size: u64 = videos.iter().map(|v| v.size).sum();
                 eprintln!(
-                    "I'm tracking {video_count} videos ({}). Run `{program_name} add <path>` to add more.",
+                    "I'm tracking {video_count} videos ({} total). Run `{program_name} add <path>` to add more.",
                     format_size(total_size)
                 );
-                eprintln!("Tip: Run `{program_name} help` for a list of commands.");
             }
+            eprintln!("Tip: Run `{program_name} help` for a list of commands.");
             start_server(sharable_state).await?;
         }
         Some("add") => {
