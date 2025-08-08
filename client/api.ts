@@ -7,6 +7,7 @@ export type Video = {
   note: string;
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
   stowed: boolean;
+  size: number;
 };
 export type State = {
   videos: Video[];
