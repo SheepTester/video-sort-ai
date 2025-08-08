@@ -24,6 +24,11 @@ export function GridView({ columns, videos }: GridViewProps) {
             alt={video.path}
             loading="lazy"
           />
+          <div className="tagdots">
+            {video.tags.map((tag) => (
+              <div data-tag={tag} key={tag} className="tagdot" />
+            ))}
+          </div>
         </button>
       ))}
     </div>

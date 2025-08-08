@@ -18,7 +18,12 @@ pub struct Video {
     pub mtime: SystemTime,
     /// currently unused, but will be used for stowing videos in Termux to avoid
     /// persecution by Google Photos
-    pub stowed: bool,
+    pub stow_state: StowState,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum StowState {
+    Original,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

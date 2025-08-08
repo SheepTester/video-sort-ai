@@ -1,36 +1,69 @@
-import { ViewMode } from "../App";
+import { useId } from "react";
+import { Filter, ViewMode } from "../types";
 
 type NavbarProps = {
   viewMode: ViewMode;
-  setViewMode: (viewMode: ViewMode) => void;
+  onViewMode: (viewMode: ViewMode) => void;
+  filter: Filter;
+  onFilter: (filter: Filter) => void;
+  tags: string[];
 };
 
-export function Navbar({ viewMode, setViewMode }: NavbarProps) {
+export function Navbar({
+  viewMode,
+  onViewMode,
+  filter,
+  onFilter,
+  tags,
+}: NavbarProps) {
   return (
     <div className="navbar">
       <button
-        onClick={() => setViewMode({ mode: "list" })}
+        onClick={() => onViewMode({ mode: "list" })}
         disabled={viewMode.mode === "list"}
       >
         L
       </button>
       <button
-        onClick={() => setViewMode({ mode: "feed" })}
+        onClick={() => onViewMode({ mode: "feed" })}
         disabled={viewMode.mode === "feed"}
       >
         F
       </button>
-      {(
-        [2, 3, 4, 5] as const
-      ).map((columns) => (
+      {([2, 3, 4, 5] as const).map((columns) => (
         <button
           key={columns}
-          onClick={() => setViewMode({ mode: "grid", columns })}
+          onClick={() => onViewMode({ mode: "grid", columns })}
           disabled={viewMode.mode === "grid" && viewMode.columns === columns}
         >
           {columns}
         </button>
       ))}
+      <select
+        value={
+          filter.mode === "with-tag" ? `with-tag:${filter.tag}` : filter.mode
+        }
+        onChange={(e) =>
+          onFilter(
+            e.currentTarget.value === "none" ||
+              e.currentTarget.value === "tagless"
+              ? { mode: e.currentTarget.value }
+              : {
+                  mode: "with-tag",
+                  tag: e.currentTarget.value.replace("with-tag:", ""),
+                }
+          )
+        }
+      >
+        <option value="none">Default</option>
+        <option value="tagless">No tags</option>
+        <hr />
+        {tags.map((tag) => (
+          <option value={`with-tag:${tag}`} key={tag}>
+            {tag}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

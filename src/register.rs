@@ -7,7 +7,7 @@ use tokio::{
     sync::Semaphore,
 };
 
-use crate::common::{BoxedError, DIR_PATH, MyResult, SharedState, Video, save_state};
+use crate::common::{BoxedError, DIR_PATH, MyResult, SharedState, StowState, Video, save_state};
 
 const MAX_CONCURRENT_FFMPEG: usize = 10;
 
@@ -73,7 +73,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                         tags: HashSet::new(),
                         note: String::new(),
                         mtime,
-                        stowed: false,
+                        stow_state: StowState::Original,
                     });
                 }
                 save_state(&*state.read().await).await?;

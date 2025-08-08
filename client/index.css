@@ -43,6 +43,11 @@ button:not(:disabled) {
   cursor: not-allowed;
 }
 
+.navbar select {
+  width: 0;
+  flex: auto;
+}
+
 .grid-view {
   display: grid;
 }
@@ -51,12 +56,31 @@ button:not(:disabled) {
   width: 100%;
   aspect-ratio: 1 / 1;
   display: flex;
+  position: relative;
 }
 
 .thumbnail img {
   width: 0;
   flex: auto;
   object-fit: cover;
+}
+
+.tagdots {
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  justify-content: end;
+  box-sizing: border-box;
+}
+.tagdot {
+  background-color: white;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
 }
 
 .list-view {
@@ -221,4 +245,20 @@ button:not(:disabled) {
 }
 .modal[open] video {
   transform: scale(1);
+}
+
+.tagswraper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px;
+  z-index: 1;
+  box-sizing: border-box;
+  background-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.8),
+    rgba(0, 0, 0, 0.3),
+    transparent
+  );
 }

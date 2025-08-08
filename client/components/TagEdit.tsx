@@ -23,14 +23,14 @@ export function TagEdit({ video }: TagEditProps) {
           <button
             className="tag add-tag"
             data-tag="delete"
-            onClick={() => addTag(video, "delete").then(setState)}
+            onClick={() => addTag(video, "_delete").then(setState)}
           >
             + DEL
           </button>
           <button
             className="tag add-tag"
             data-tag="youtube"
-            onClick={() => addTag(video, "youtube").then(setState)}
+            onClick={() => addTag(video, "_youtube").then(setState)}
           >
             + YT
           </button>

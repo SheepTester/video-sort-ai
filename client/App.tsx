@@ -7,11 +7,7 @@ import { Navbar } from "./components/Navbar";
 import { SetStateContext } from "./contexts/state";
 import { VideoContextProvider } from "./contexts/video";
 import { VideoModal } from "./components/VideoModal";
-
-export type ViewMode =
-  | { mode: "list" }
-  | { mode: "feed" }
-  | { mode: "grid"; columns: 2 | 3 | 4 | 5 };
+import { Filter, ViewMode } from "./types";
 
 type AppInnerProps = {
   state: State;
@@ -22,8 +18,15 @@ function AppInner({ state }: AppInnerProps) {
     mode: "grid",
     columns: 5,
   });
+  const [filter, setFilter] = useState<Filter>({ mode: "none" });
 
-  const videos = state.videos.toReversed();
+  const videos = (
+    filter.mode === "with-tag"
+      ? state.videos.filter((video) => video.tags.includes(filter.tag))
+      : filter.mode === "tagless"
+      ? state.videos.filter((video) => video.tags.length === 0)
+      : state.videos
+  ).toReversed();
   const tags = useMemo(
     () =>
       Array.from(new Set(state.videos.flatMap((video) => video.tags))).sort(),
@@ -32,7 +35,13 @@ function AppInner({ state }: AppInnerProps) {
 
   return (
     <div>
-      <Navbar viewMode={viewMode} setViewMode={setViewMode} />
+      <Navbar
+        viewMode={viewMode}
+        onViewMode={setViewMode}
+        filter={filter}
+        onFilter={setFilter}
+        tags={tags}
+      />
       {viewMode.mode === "grid" ? (
         <GridView columns={viewMode.columns} videos={videos} />
       ) : viewMode.mode === "list" ? (
