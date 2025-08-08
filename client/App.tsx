@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
-import { getList, State } from "./api";
+import { useCallback, useEffect, useState } from "react";
+import { getList, State, Video } from "./api";
 import { GridView } from "./components/GridView";
 import { ListView } from "./components/ListView";
 import { FeedView } from "./components/FeedView";
 import { Navbar } from "./components/Navbar";
-import { SetStateContext } from "./state";
+import { SetStateContext } from "./contexts/state";
+import { VideoContextProvider } from "./contexts/video";
+import { VideoModal } from "./components/VideoModal";
 
 export type ViewMode =
   | { mode: "list" }
@@ -18,18 +20,20 @@ type AppInnerProps = {
 function AppInner({ state }: AppInnerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>({
     mode: "grid",
-    columns: 3,
+    columns: 5,
   });
+
+  const videos = state.videos.toReversed();
 
   return (
     <div>
       <Navbar viewMode={viewMode} setViewMode={setViewMode} />
       {viewMode.mode === "grid" ? (
-        <GridView columns={viewMode.columns} videos={state.videos} />
+        <GridView columns={viewMode.columns} videos={videos} />
       ) : viewMode.mode === "list" ? (
-        <ListView videos={state.videos} />
+        <ListView videos={videos} />
       ) : (
-        <FeedView videos={state.videos} />
+        <FeedView videos={videos} />
       )}
     </div>
   );
@@ -37,9 +41,15 @@ function AppInner({ state }: AppInnerProps) {
 
 export function App() {
   const [state, setState] = useState<State | null>(null);
-
   useEffect(() => {
     getList().then(setState);
+  }, []);
+
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [video, setVideo] = useState<Video | null>(null);
+  const showVideo = useCallback((video: Video) => {
+    setVideoOpen(true);
+    setVideo(video);
   }, []);
 
   if (!state) {
@@ -48,7 +58,14 @@ export function App() {
 
   return (
     <SetStateContext.Provider value={setState}>
-      <AppInner state={state} />
+      <VideoContextProvider value={showVideo}>
+        <AppInner state={state} />
+        <VideoModal
+          open={videoOpen}
+          onClose={() => setVideoOpen(false)}
+          video={video}
+        />
+      </VideoContextProvider>
     </SetStateContext.Provider>
   );
 }

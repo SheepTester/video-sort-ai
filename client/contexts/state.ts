@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { State } from "./api";
+import { State } from "../api";
 
 type SetState = (newState: State) => void;
 

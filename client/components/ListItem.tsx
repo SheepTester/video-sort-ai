@@ -1,16 +1,24 @@
 import { FormEvent, useState } from "react";
 import { getThumbnailUrl, setNote, Video } from "../api";
-import { useSetState } from "../state";
+import { useSetState } from "../contexts/state";
+import { useVideoContext } from "../contexts/video";
 
 function extractFilename(path: string) {
   return path.split("/").pop() || path;
 }
+
+const fmt = new Intl.DateTimeFormat([], {
+  dateStyle: "long",
+  timeStyle: "medium",
+});
 
 type ListItemProps = {
   video: Video;
 };
 
 export function ListItem({ video }: ListItemProps) {
+  const showVideo = useVideoContext();
+
   const setState = useSetState();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -29,18 +37,19 @@ export function ListItem({ video }: ListItemProps) {
 
   return (
     <div className="list-item">
-      <div className="list-item-thumbnail">
+      <button className="list-item-thumbnail" onClick={() => showVideo(video)}>
         <img
           src={getThumbnailUrl(video).toString()}
           alt={video.path}
           loading="lazy"
         />
-      </div>
+      </button>
       <div className="list-item-info">
         <div className="list-item-filename">
           <span>{extractFilename(video.path)}</span>
           <button onClick={handleCopyFilename}>Copy</button>
         </div>
+        <div>{fmt.format(video.mtime.secs_since_epoch * 1000)}</div>
         <div className="list-item-tags">
           {video.tags.map((tag) => (
             <span key={tag} className="tag">
@@ -63,10 +72,10 @@ export function ListItem({ video }: ListItemProps) {
               </button>
             </form>
           ) : (
-            <>
-              <p>{video.note || <em>No note.</em>}</p>
-              <button onClick={() => setIsEditing(true)}>Edit Note</button>
-            </>
+            <p>
+              {video.note || <em>No note.</em>}
+              <button onClick={() => setIsEditing(true)}>Edit</button>
+            </p>
           )}
         </div>
       </div>
