@@ -5,6 +5,10 @@ on:
     tags:
       - v*
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version number (without v)'
+        required: true
 
 permissions:
   contents: write
@@ -15,21 +19,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 is needed to get all history for tagging
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          CURRENT_VERSION=$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)
+          # Only bump version if needed
+          if [ "$CURRENT_VERSION" != "${{ github.event.inputs.version }}" ]; then
+            sed -i "s/^version = .*/version = \"${{ github.event.inputs.version }}\"/" Cargo.toml
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git commit -am "Bump version to ${{ github.event.inputs.version }}"
+            git push
+          fi
+          # Tag and push
+          git tag -a "v${{ github.event.inputs.version }}" -m "version numero ${{ github.event.inputs.version }}"
+          git push --tags
+
+      - name: Get release version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
+
       - name: Build
         run: |
           npm install
           npm run client:build
-          echo -n "v$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)" > src/static/version.txt
+          echo -n "$VERSION" > src/static/version.txt
           cargo install --git https://github.com/cross-rs/cross.git cross --rev e281947ca900da425e4ecea7483cfde646c8a1ea
           cross build --release --target aarch64-linux-android
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.VERSION }}
           body: |
             ## Installation
 
             ```sh
-            curl -L "https://github.com/SheepTester/video-sort-ai/releases/download/${{ github.ref_name }}/video-sort" > video-sort
+            curl -L "https://github.com/SheepTester/video-sort-ai/releases/download/${{ env.VERSION }}/video-sort" > video-sort
             chmod +x video-sort
             ```
 
