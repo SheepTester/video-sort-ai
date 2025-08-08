@@ -126,15 +126,12 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 }
                 save_state(&*state.read().await).await?;
             }
-            Ok(Response::builder()
-                .status(StatusCode::NO_CONTENT)
-                .header("Access-Control-Allow-Origin", CORS)
-                .body(Full::new(Bytes::new()).map_err(|e| match e {}).boxed())?)
+            build_json_response(&*state.read().await)
         }
         (&Method::OPTIONS, _) => Ok(Response::builder()
             .status(StatusCode::NO_CONTENT)
             .header("Access-Control-Allow-Origin", CORS)
-            .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE")
             .header("Access-Control-Allow-Headers", "Content-Type")
             .body(Full::new(Bytes::new()).map_err(|e| match e {}).boxed())?),
         (&Method::POST, path)

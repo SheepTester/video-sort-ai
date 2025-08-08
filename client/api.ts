@@ -18,6 +18,7 @@ export type VideoMetadataEditReq = {
 export type JsonError = {
   error: string;
 };
+export type DeleteRequest = { Thumbnail: string } | { Tag: string };
 
 export const getList = () =>
   fetch(new URL("/list", ROOT)).then(
@@ -68,3 +69,17 @@ export const getVideoUrl = (video: Video) =>
 
 export const getThumbnailUrl = (video: Video) =>
   new URL(`/t/${encodeURIComponent(video.thumbnail_name)}`, ROOT);
+
+const deleteVideos = (request: DeleteRequest) =>
+  fetch(new URL("/videos", ROOT), {
+    method: "DELETE",
+    body: JSON.stringify(request),
+  }).then(
+    async (r): Promise<State> =>
+      r.ok
+        ? r.json()
+        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
+  );
+
+export const deleteVideo = (video: Video) =>
+  deleteVideos({ Thumbnail: video.thumbnail_name });

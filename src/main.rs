@@ -63,8 +63,9 @@ async fn main() -> MyResult<()> {
     match command.as_deref() {
         None => {
             let video_count = sharable_state.read().await.videos.len();
+            eprintln!("Video Sort {}", include_str!("./static/version.txt"));
             eprintln!(
-                "I am tracking {video_count} videos. Run `{program_name} add <path>` to add more."
+                "I'm tracking {video_count} videos. Run `{program_name} add <path>` to add more."
             );
             eprintln!("Tip: Run `{program_name} help` for a list of commands.");
             start_server(sharable_state).await?;

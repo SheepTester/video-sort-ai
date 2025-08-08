@@ -1,5 +1,11 @@
 import { FormEvent, useState } from "react";
-import { getThumbnailUrl, setNote, Video } from "../api";
+import {
+  deleteVideo,
+  getThumbnailUrl,
+  removeTag,
+  setNote,
+  Video,
+} from "../api";
 import { useSetState } from "../contexts/state";
 import { useVideoContext } from "../contexts/video";
 import { TagEdit } from "./TagEdit";
@@ -50,9 +56,21 @@ export function ListItem({ video }: ListItemProps) {
           <span>{extractFilename(video.path)}</span>
           <button onClick={handleCopyFilename}>Copy</button>
         </div>
-        <div>{fmt.format(video.mtime.secs_since_epoch * 1000)}</div>
+        <div className="time">
+          {fmt.format(video.mtime.secs_since_epoch * 1000)}
+          <button
+            onClick={() => {
+              if (confirm(`delete ${extractFilename(video.path)} fr?`)) {
+                deleteVideo(video).then(setState);
+              }
+            }}
+            className="deletebtn"
+          >
+            Delete
+          </button>
+        </div>
         <TagEdit video={video} />
-        <div className="list-item-note">
+        {/* <div className="list-item-note">
           {isEditing ? (
             <form onSubmit={handleSaveNote}>
               <input
@@ -72,7 +90,7 @@ export function ListItem({ video }: ListItemProps) {
               <button onClick={() => setIsEditing(true)}>Edit</button>
             </p>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );

@@ -121,12 +121,24 @@ button:not(:disabled) {
 
 .list-item-filename {
   display: flex;
-  align-items: center;
+  align-items: start;
   gap: 8px;
+  font-weight: bold;
 }
 
 .list-item-filename button {
   padding: 2px 4px;
+  font-weight: normal;
+}
+
+.time {
+  color: color-mix(in srgb, currentColor 80%, transparent);
+  font-size: 0.8em;
+}
+
+.deletebtn {
+  color: red;
+  padding: 0 4px;
 }
 
 .tags {
