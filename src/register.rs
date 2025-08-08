@@ -1,7 +1,7 @@
 use std::{collections::HashSet, ffi::OsStr, sync::Arc};
 
 use tokio::{
-    fs,
+    fs::{self, metadata},
     io::{self, AsyncWriteExt},
     process::Command,
     sync::Semaphore,
@@ -41,6 +41,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     .file_name()
                     .map(|s| s.to_string_lossy())
                     .unwrap_or_default();
+                let mtime = metadata(&path).await?.modified()?;
                 let thumbnail_name = format!(
                     "{}.jpg",
                     sanitize_filename::sanitize(path.as_os_str().to_string_lossy())
@@ -71,6 +72,8 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                         thumbnail_name,
                         tags: HashSet::new(),
                         note: String::new(),
+                        mtime,
+                        stowed: false,
                     });
                 }
                 save_state(&*state.read().await).await?;

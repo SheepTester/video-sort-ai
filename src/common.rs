@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::PathBuf, sync::Arc};
+use std::{collections::HashSet, path::PathBuf, sync::Arc, time::SystemTime};
 
 use serde::{Deserialize, Serialize};
 use tokio::{fs, sync::RwLock};
@@ -15,6 +15,10 @@ pub struct Video {
     pub thumbnail_name: String,
     pub tags: HashSet<String>,
     pub note: String,
+    pub mtime: SystemTime,
+    /// currently unused, but will be used for stowing videos in Termux to avoid
+    /// persecution by Google Photos
+    pub stowed: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

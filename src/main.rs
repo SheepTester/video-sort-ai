@@ -41,12 +41,15 @@ async fn start_server(state: SharedState) -> MyResult<()> {
 #[tokio::main]
 async fn main() -> MyResult<()> {
     fs::create_dir_all(format!("{DIR_PATH}/thumbs/")).await?;
-    let state = match fs::read_to_string(format!("{DIR_PATH}/state.json")).await {
-        Ok(json) => serde_json::from_str(&json)?,
-        Err(err) if err.kind() == ErrorKind::NotFound => State { videos: Vec::new() },
-        Err(err) => Err(err)?,
-    };
-    let sharable_state = Arc::new(RwLock::new(state));
+    let sharable_state = Arc::new(RwLock::new({
+        let mut state = match fs::read_to_string(format!("{DIR_PATH}/state.json")).await {
+            Ok(json) => serde_json::from_str(&json)?,
+            Err(err) if err.kind() == ErrorKind::NotFound => State { videos: Vec::new() },
+            Err(err) => Err(err)?,
+        };
+        state.videos.sort_by_key(|v| v.mtime);
+        state
+    }));
 
     let (program_name, command, add_path) = {
         let mut args = std::env::args();
