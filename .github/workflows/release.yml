@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version number (without v)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check and update version
+        run: |
+          CURRENT_VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f 2)
+          if [ "$CURRENT_VERSION" != "${{ github.event.inputs.version }}" ]; then
+            sed -i "s/^version = .*/version = \"${{ github.event.inputs.version }}\"/" Cargo.toml
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git commit -am "Bump version to ${{ github.event.inputs.version }}"
+            git push
+          fi
+
+      - name: Tag and push
+        run: |
+          V="$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)" && git tag -a "v$V" -m "version numero $V" && git push --tags
