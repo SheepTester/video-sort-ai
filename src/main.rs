@@ -5,7 +5,7 @@ use hyper_util::rt::TokioIo;
 use tokio::{fs, net::TcpListener, sync::RwLock};
 
 use crate::{
-    common::{DIR_PATH, MyResult, SharedState, State},
+    common::{format_size, DIR_PATH, MyResult, SharedState, State},
     http_handler::handle_request_wrapper,
     register::add_videos,
 };
@@ -62,12 +62,17 @@ async fn main() -> MyResult<()> {
 
     match command.as_deref() {
         None => {
-            let video_count = sharable_state.read().await.videos.len();
-            eprintln!("Video Sort {}", include_str!("./static/version.txt"));
-            eprintln!(
-                "I'm tracking {video_count} videos. Run `{program_name} add <path>` to add more."
-            );
-            eprintln!("Tip: Run `{program_name} help` for a list of commands.");
+            {
+                let state = sharable_state.read().await;
+                let video_count = state.videos.len();
+                let total_size: u64 = state.videos.iter().map(|v| v.size).sum();
+                eprintln!("Video Sort {}", include_str!("./static/version.txt"));
+                eprintln!(
+                    "I'm tracking {video_count} videos ({}). Run `{program_name} add <path>` to add more.",
+                    format_size(total_size)
+                );
+                eprintln!("Tip: Run `{program_name} help` for a list of commands.");
+            }
             start_server(sharable_state).await?;
         }
         Some("add") => {

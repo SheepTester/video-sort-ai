@@ -7,7 +7,9 @@ use tokio::{
     sync::Semaphore,
 };
 
-use crate::common::{BoxedError, DIR_PATH, MyResult, SharedState, StowState, Video, save_state};
+use crate::common::{
+    format_size, BoxedError, MyResult, SharedState, StowState, Video, DIR_PATH, save_state,
+};
 
 const MAX_CONCURRENT_FFMPEG: usize = 10;
 
@@ -62,7 +64,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     .output()
                     .await?;
                 if ffmpeg_result.status.success() {
-                    println!("+ {file_name}");
+                    println!("+ {file_name} ({})", format_size(size));
                 } else {
                     eprintln!("Failed to create thumbnail for {file_name}.");
                     io::stderr().write_all(&ffmpeg_result.stderr).await?;

@@ -40,3 +40,22 @@ pub async fn save_state(state: &State) -> MyResult<()> {
     .await?;
     Ok(())
 }
+
+const KIBIBYTE: u64 = 1024;
+const MEBIBYTE: u64 = 1024 * KIBIBYTE;
+const GIBIBYTE: u64 = 1024 * MEBIBYTE;
+const TEBIBYTE: u64 = 1024 * GIBIBYTE;
+
+pub fn format_size(size: u64) -> String {
+    if size >= TEBIBYTE {
+        format!("{:.2} TiB", size as f64 / TEBIBYTE as f64)
+    } else if size >= GIBIBYTE {
+        format!("{:.2} GiB", size as f64 / GIBIBYTE as f64)
+    } else if size >= MEBIBYTE {
+        format!("{:.2} MiB", size as f64 / MEBIBYTE as f64)
+    } else if size >= KIBIBYTE {
+        format!("{:.2} KiB", size as f64 / KIBIBYTE as f64)
+    } else {
+        format!("{size} B")
+    }
+}
