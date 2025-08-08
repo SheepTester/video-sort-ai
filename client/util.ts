@@ -1,14 +1,11 @@
 export function formatSize(bytes: number): string {
-  if (bytes === 0) {
-    return "0 B";
-  }
   const k = 1000;
   if (bytes < k) {
     return `${bytes} B`;
   }
   const kb = bytes / k;
   if (kb < k) {
-    return `${kb.toFixed(1)} KB`;
+    return `${kb.toFixed(1)} kB`;
   }
   const mb = kb / k;
   if (mb < k) {
