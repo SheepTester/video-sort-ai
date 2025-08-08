@@ -3,7 +3,21 @@ export function formatSize(bytes: number): string {
     return "0 B";
   }
   const k = 1000;
-  const sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  if (bytes < k) {
+    return `${bytes} B`;
+  }
+  const kb = bytes / k;
+  if (kb < k) {
+    return `${kb.toFixed(1)} KB`;
+  }
+  const mb = kb / k;
+  if (mb < k) {
+    return `${mb.toFixed(1)} MB`;
+  }
+  const gb = mb / k;
+  if (gb < k) {
+    return `${gb.toFixed(1)} GB`;
+  }
+  const tb = gb / k;
+  return `${tb.toFixed(1)} TB`;
 }
