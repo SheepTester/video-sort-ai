@@ -16,6 +16,7 @@ pub struct Video {
     pub tags: HashSet<String>,
     pub note: String,
     pub mtime: SystemTime,
+    pub size: u64,
     /// currently unused, but will be used for stowing videos in Termux to avoid
     /// persecution by Google Photos
     pub stow_state: StowState,

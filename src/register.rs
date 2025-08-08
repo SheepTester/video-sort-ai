@@ -41,7 +41,9 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     .file_name()
                     .map(|s| s.to_string_lossy())
                     .unwrap_or_default();
-                let mtime = metadata(&path).await?.modified()?;
+                let metadata = metadata(&path).await?;
+                let mtime = metadata.modified()?;
+                let size = metadata.len();
                 let thumbnail_name = format!(
                     "{}.jpg",
                     sanitize_filename::sanitize(path.as_os_str().to_string_lossy())
@@ -73,6 +75,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                         tags: HashSet::new(),
                         note: String::new(),
                         mtime,
+                        size,
                         stow_state: StowState::Original,
                     });
                 }
