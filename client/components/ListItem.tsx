@@ -64,7 +64,7 @@ export function ListItem({ video }: ListItemProps) {
             </form>
           ) : (
             <>
-              <p>{video.note || "No note."}</p>
+              <p>{video.note || <em>No note.</em>}</p>
               <button onClick={() => setIsEditing(true)}>Edit Note</button>
             </>
           )}
