@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { getThumbnailUrl, setNote, Video } from "../api";
 import { useSetState } from "../contexts/state";
 import { useVideoContext } from "../contexts/video";
+import { TagEdit } from "./TagEdit";
 
 function extractFilename(path: string) {
   return path.split("/").pop() || path;
@@ -50,13 +51,7 @@ export function ListItem({ video }: ListItemProps) {
           <button onClick={handleCopyFilename}>Copy</button>
         </div>
         <div>{fmt.format(video.mtime.secs_since_epoch * 1000)}</div>
-        <div className="list-item-tags">
-          {video.tags.map((tag) => (
-            <span key={tag} className="tag">
-              {tag}
-            </span>
-          ))}
-        </div>
+        <TagEdit video={video} />
         <div className="list-item-note">
           {isEditing ? (
             <form onSubmit={handleSaveNote}>

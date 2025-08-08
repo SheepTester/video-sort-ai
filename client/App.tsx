@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getList, State, Video } from "./api";
 import { GridView } from "./components/GridView";
 import { ListView } from "./components/ListView";
@@ -24,6 +24,11 @@ function AppInner({ state }: AppInnerProps) {
   });
 
   const videos = state.videos.toReversed();
+  const tags = useMemo(
+    () =>
+      Array.from(new Set(state.videos.flatMap((video) => video.tags))).sort(),
+    [state]
+  );
 
   return (
     <div>
@@ -35,6 +40,11 @@ function AppInner({ state }: AppInnerProps) {
       ) : (
         <FeedView videos={videos} />
       )}
+      <datalist id="tags">
+        {tags.map((tag) => (
+          <option value={tag} key={tag} />
+        ))}
+      </datalist>
     </div>
   );
 }
@@ -46,10 +56,10 @@ export function App() {
   }, []);
 
   const [videoOpen, setVideoOpen] = useState(false);
-  const [video, setVideo] = useState<Video | null>(null);
+  const [videoPath, setVideoPath] = useState("");
   const showVideo = useCallback((video: Video) => {
     setVideoOpen(true);
-    setVideo(video);
+    setVideoPath(video.path);
   }, []);
 
   if (!state) {
@@ -63,7 +73,7 @@ export function App() {
         <VideoModal
           open={videoOpen}
           onClose={() => setVideoOpen(false)}
-          video={video}
+          video={state.videos.find((video) => video.path === videoPath) ?? null}
         />
       </VideoContextProvider>
     </SetStateContext.Provider>

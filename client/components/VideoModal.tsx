@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { getThumbnailUrl, getVideoUrl, Video } from "../api";
+import { TagEdit } from "./TagEdit";
 
 export type VideoModalProps = {
   open: boolean;
@@ -22,9 +23,14 @@ export function VideoModal({ open, onClose, video }: VideoModalProps) {
 
   return (
     <dialog ref={dialogRef} onClose={onClose} className="modal">
-      <form method="dialog">
-        <button type="submit">&times;</button>
-      </form>
+      <div className="topbar">
+        {video && <TagEdit video={video} />}
+        <form method="dialog" className="closebtnform">
+          <button className="closebtn" type="submit">
+            &times;
+          </button>
+        </form>
+      </div>
       {video && (
         <video
           className="feed-video"

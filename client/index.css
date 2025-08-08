@@ -103,17 +103,43 @@ button:not(:disabled) {
   padding: 2px 4px;
 }
 
-.list-item-tags {
+.tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
 .tag {
+  display: flex;
   background-color: color-mix(in srgb, currentColor 5%, transparent);
-  padding: 2px 6px;
+  padding-left: 6px;
   border-radius: 4px;
   font-size: 12px;
+  align-items: center;
+  gap: 5px;
+}
+.tag button {
+  width: 16px;
+  height: 16px;
+  border-left: 1px solid color-mix(in srgb, currentColor 5%, transparent);
+}
+.add-tag {
+  padding-right: 6px;
+}
+[data-tag="delete"] {
+  background-color: oklch(63.7% 0.237 25.331);
+}
+[data-tag="youtube"] {
+  background-color: oklch(62.3% 0.214 259.815);
+}
+
+.tags form {
+  flex: auto;
+  display: flex;
+}
+.tags form input {
+  flex: auto;
+  width: 20px;
 }
 
 .list-item-note input {
@@ -170,14 +196,22 @@ button:not(:disabled) {
   background: none;
 }
 
-.modal form {
+.modal .topbar {
   flex: none;
   display: flex;
-  justify-content: end;
   height: 60px;
+  align-items: center;
 }
-.modal form button {
+.modal .tags {
+  flex: auto;
+  padding-left: 20px;
+}
+.closebtnform {
+  margin-left: auto;
+}
+.modal .topbar .closebtn {
   width: 60px;
+  height: 60px;
 }
 .modal video {
   height: 0;
