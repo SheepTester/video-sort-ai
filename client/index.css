@@ -34,14 +34,15 @@ button:not(:disabled) {
 
 .navbar button {
   margin-right: 8px;
-  padding: 4px 16px;
+  padding: 4px 0;
+  width: 40px;
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   background: Canvas;
+  border-radius: 4px;
 }
 
 .navbar button:disabled {
-  background: color-mix(in srgb, currentColor 5%, transparent);
-  cursor: not-allowed;
+  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .navbar select {
@@ -165,6 +166,12 @@ button:not(:disabled) {
 .tags form input {
   flex: auto;
   width: 20px;
+}
+.tags form button {
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  background-color: color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 50%;
 }
 
 .list-item-note input {

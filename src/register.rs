@@ -88,6 +88,9 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
         };
     }
 
+    // fix terminal from entering raw mode
+    let _ = Command::new("stty").arg("sane").status().await?;
+
     if paths.is_empty() {
         eprintln!("No new .mp4 files found in {path}.");
     } else {

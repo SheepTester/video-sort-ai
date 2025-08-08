@@ -22,13 +22,13 @@ export function Navbar({
         onClick={() => onViewMode({ mode: "list" })}
         disabled={viewMode.mode === "list"}
       >
-        L
+        Li
       </button>
       <button
         onClick={() => onViewMode({ mode: "feed" })}
         disabled={viewMode.mode === "feed"}
       >
-        F
+        FY
       </button>
       {([2, 3, 4, 5] as const).map((columns) => (
         <button
@@ -63,6 +63,9 @@ export function Navbar({
             {tag}
           </option>
         ))}
+        {filter.mode === "with-tag" && !tags.includes(filter.tag) ? (
+          <option value={`with-tag:${filter.tag}`}>{filter.tag}</option>
+        ) : null}
       </select>
     </div>
   );

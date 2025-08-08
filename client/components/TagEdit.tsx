@@ -47,6 +47,7 @@ export function TagEdit({ video }: TagEditProps) {
         }}
       >
         <input name="tag" placeholder="add a tag" type="text" list="tags" />
+        <button type="submit">+</button>
       </form>
     </div>
   );
