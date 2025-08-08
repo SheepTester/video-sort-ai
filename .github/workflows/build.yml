@@ -26,14 +26,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body: |
-            # Installation
+            ## Installation
 
             ```sh
-            curl -L "https://github.com/SheepTester/video-sort-ai/releases/latest/download/video-sort" > video-sort
+            curl -L "https://github.com/SheepTester/video-sort-ai/releases/download/${{ github.ref_name }}/video-sort" > video-sort
             chmod +x video-sort
             ```
 
-            # What's changed?
+            ## What's changed?
 
             no fucking clue
           files: target/aarch64-linux-android/release/video-sort
