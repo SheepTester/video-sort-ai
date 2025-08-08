@@ -65,4 +65,4 @@ export const getVideoUrl = (video: Video) =>
   new URL(`/v/${encodeURIComponent(video.path)}`, ROOT);
 
 export const getThumbnailUrl = (video: Video) =>
-  new URL(`/v/${encodeURIComponent(video.thumbnail_name)}`, ROOT);
+  new URL(`/t/${encodeURIComponent(video.thumbnail_name)}`, ROOT);

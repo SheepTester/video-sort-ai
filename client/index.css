@@ -1,3 +1,6 @@
+:root {
+  color-scheme: dark;
+}
 body {
   margin: 0;
 }
@@ -5,19 +8,19 @@ body {
 .navbar {
   display: flex;
   padding: 8px;
-  border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
 }
 
 .navbar button {
   margin-right: 8px;
   padding: 4px 8px;
-  border: 1px solid #ccc;
-  background: #fff;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  background: Canvas;
   cursor: pointer;
 }
 
 .navbar button:disabled {
-  background: #eee;
+  background: color-mix(in srgb, currentColor 5%, transparent);
   cursor: not-allowed;
 }
 
@@ -30,22 +33,26 @@ body {
 .thumbnail {
   width: 100%;
   aspect-ratio: 1 / 1;
+  display: flex;
 }
 
 .thumbnail img {
-  width: 100%;
-  height: 100%;
+  width: 0;
+  flex: auto;
   object-fit: cover;
 }
 
 .list-view {
   padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .list-item {
+  flex: none;
   display: flex;
-  margin-bottom: 16px;
-  border: 1px solid #ccc;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   border-radius: 4px;
   padding: 8px;
 }
@@ -86,7 +93,7 @@ body {
 }
 
 .tag {
-  background-color: #eee;
+  background-color: color-mix(in srgb, currentColor 5%, transparent);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;

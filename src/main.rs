@@ -34,6 +34,7 @@ use tokio_util::io::ReaderStream;
 
 const PORT: u16 = 8008;
 const DIR_PATH: &str = "./.video-sort";
+const CORS: &str = "http://127.0.0.1:8000";
 
 type BoxedError = Box<dyn std::error::Error + Send + Sync>;
 type MyResult<T> = Result<T, BoxedError>;
@@ -81,7 +82,7 @@ fn build_text_response(status: StatusCode, message: String) -> MyResponse {
     Ok(Response::builder()
         .status(status)
         .header("Content-Type", "text/plain")
-        .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+        .header("Access-Control-Allow-Origin", CORS)
         .body(Full::from(message).map_err(|e| match e {}).boxed())?)
 }
 
@@ -89,7 +90,7 @@ fn build_html_response(status: StatusCode, message: String) -> MyResponse {
     Ok(Response::builder()
         .status(status)
         .header("Content-Type", "text/html")
-        .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+        .header("Access-Control-Allow-Origin", CORS)
         .body(Full::from(message).map_err(|e| match e {}).boxed())?)
 }
 
@@ -97,7 +98,7 @@ fn build_json_response<T: Serialize>(object: &T) -> MyResponse {
     Ok(Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/json")
-        .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+        .header("Access-Control-Allow-Origin", CORS)
         .body(
             Full::from(serde_json::to_string(object)?)
                 .map_err(|e| match e {})
@@ -114,7 +115,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
         (&Method::GET, "/index.css") => Ok(Response::builder()
             .status(StatusCode::OK)
             .header("Content-Type", "text/css")
-            .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+            .header("Access-Control-Allow-Origin", CORS)
             .body(
                 Full::from(&include_bytes!("./static/index.css")[..])
                     .map_err(|e| match e {})
@@ -123,7 +124,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
         (&Method::GET, "/index.js") => Ok(Response::builder()
             .status(StatusCode::OK)
             .header("Content-Type", "text/javascript")
-            .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+            .header("Access-Control-Allow-Origin", CORS)
             .body(
                 Full::from(&include_bytes!("./static/index.js")[..])
                     .map_err(|e| match e {})
@@ -132,7 +133,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
         (&Method::GET, "/favicon.ico") => Ok(Response::builder()
             .status(StatusCode::OK)
             .header("Content-Type", "image/vnd.microsoft.icon")
-            .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+            .header("Access-Control-Allow-Origin", CORS)
             .body(
                 Full::from(&include_bytes!("./static/favicon.ico")[..])
                     .map_err(|e| match e {})
@@ -165,9 +166,15 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             }
             Ok(Response::builder()
                 .status(StatusCode::NO_CONTENT)
-                .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+                .header("Access-Control-Allow-Origin", CORS)
                 .body(Full::new(Bytes::new()).map_err(|e| match e {}).boxed())?)
         }
+        (&Method::OPTIONS, _) => Ok(Response::builder()
+            .status(StatusCode::NO_CONTENT)
+            .header("Access-Control-Allow-Origin", CORS)
+            .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            .header("Access-Control-Allow-Headers", "Content-Type")
+            .body(Full::new(Bytes::new()).map_err(|e| match e {}).boxed())?),
         (&Method::POST, path)
             if path == "/tag/add" || path == "/tag/remove" || path == "/editnote" =>
         {
@@ -218,7 +225,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-Type", "video/mp4")
-                .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+                .header("Access-Control-Allow-Origin", CORS)
                 .body(boxed_body)?)
         }
         (&Method::GET, path) if path.starts_with("/t/") => {
@@ -233,7 +240,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             Ok(Response::builder()
                 .status(StatusCode::OK)
                 .header("Content-Type", "image/jpeg")
-                .header("Access-Control-Allow-Origin", "http://127.0.0.1:8000")
+                .header("Access-Control-Allow-Origin", CORS)
                 .body(boxed_body)?)
         }
         (&Method::GET, path) => build_html_response(
