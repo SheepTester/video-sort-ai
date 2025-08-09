@@ -6,12 +6,14 @@ use tokio::{fs, net::TcpListener, sync::RwLock};
 
 use crate::{
     common::{DIR_PATH, SharedState, State},
+    fmt::{bold, link},
     http_handler::handle_request_wrapper,
     register::add_videos,
     util::{MyResult, format_size},
 };
 
 mod common;
+mod fmt;
 mod http_handler;
 mod register;
 mod util;
@@ -20,7 +22,7 @@ async fn start_server(state: SharedState) -> MyResult<()> {
     const PORT: u16 = 8008;
     let addr = SocketAddr::from(([0, 0, 0, 0], PORT));
     let listener = TcpListener::bind(addr).await?;
-    eprintln!("http://localhost:{PORT}");
+    eprintln!("{}", link(&format!("http://localhost:{PORT}")));
 
     loop {
         let state_clone = state.clone();
@@ -62,7 +64,13 @@ async fn main() -> MyResult<()> {
 
     match command.as_deref() {
         None => {
-            eprintln!("Video Sort {}", include_str!("./static/version.txt"));
+            eprintln!(
+                "{}",
+                bold(&format!(
+                    "Video Sort {}",
+                    include_str!("./static/version.txt")
+                ))
+            );
             {
                 let videos = &sharable_state.read().await.videos;
                 let video_count = videos.len();
@@ -71,8 +79,13 @@ async fn main() -> MyResult<()> {
                     "I'm tracking {video_count} videos ({} total). Run `{program_name} add <path>` to add more.",
                     format_size(total_size)
                 );
+                if video_count == 0 {
+                    eprintln!(
+                        "{}: Run `{program_name} help` for a list of commands.",
+                        bold("Tip")
+                    );
+                }
             }
-            eprintln!("Tip: Run `{program_name} help` for a list of commands.");
             start_server(sharable_state).await?;
         }
         Some("add") => {
@@ -86,7 +99,7 @@ async fn main() -> MyResult<()> {
             println!("{}", include_str!("./static/version.txt"));
         }
         Some("help") => {
-            eprintln!("Available commands:");
+            eprintln!("{}", bold("Available commands"));
             eprintln!("$ {program_name}");
             eprintln!("| Start the web server.");
             eprintln!("$ {program_name} add <path>");
@@ -94,8 +107,25 @@ async fn main() -> MyResult<()> {
             eprintln!("| (shallow).");
             eprintln!("$ {program_name} version");
             eprintln!("| Print the program version.");
+            eprintln!("$ {program_name} about");
+            eprintln!("| Display information about this software.");
             eprintln!("$ {program_name} help");
             eprintln!("| Display this list.");
+        }
+        Some("about") => {
+            eprintln!(
+                "{}",
+                bold(&format!(
+                    "Video Sort {}",
+                    include_str!("./static/version.txt")
+                ))
+            );
+            eprintln!("Made by Sean");
+            eprintln!();
+            eprintln!(
+                "GitHub: {}",
+                link("https://github.com/SheepTester/video-sort-ai")
+            );
         }
         Some(arg) => {
             eprintln!(
