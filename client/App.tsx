@@ -69,8 +69,21 @@ function AppInner({ state }: AppInnerProps) {
 
 export function App() {
   const [state, setState] = useState<State | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   useEffect(() => {
     getList().then(setState);
+    const errorListener = (e: ErrorEvent) => {
+      setError(e.error);
+    };
+    const rejectionListener = (e: PromiseRejectionEvent) => {
+      setError(e.reason);
+    };
+    window.addEventListener("error", errorListener);
+    window.addEventListener("unhandledrejection", rejectionListener);
+    return () => {
+      window.removeEventListener("error", errorListener);
+      window.removeEventListener("unhandledrejection", rejectionListener);
+    };
   }, []);
 
   const [videoOpen, setVideoOpen] = useState(false);
@@ -93,6 +106,23 @@ export function App() {
           onClose={() => setVideoOpen(false)}
           video={state.videos.find((video) => video.path === videoPath) ?? null}
         />
+        {error && (
+          <pre
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: "lightcoral",
+              color: "black",
+              padding: "1em",
+              margin: 0,
+              zIndex: 9999,
+            }}
+          >
+            {error.stack}
+          </pre>
+        )}
       </VideoContextProvider>
     </SetStateContext.Provider>
   );
