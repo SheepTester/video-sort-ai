@@ -16,6 +16,10 @@ export type VideoMetadataEditReq = {
   thumbnail_name: string;
   tag_or_note: string;
 };
+export type RenameTagRequest = {
+  old: string;
+  new: string;
+};
 export type JsonError = {
   error: string;
 };
@@ -64,6 +68,24 @@ export const setNote = (video: Video, note: string) =>
     thumbnail_name: video.thumbnail_name,
     tag_or_note: note,
   });
+
+export const renameTag = (oldTag: string, newTag: string) =>
+  fetch(new URL("/tag/rename", ROOT), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ old: oldTag, new: newTag } as RenameTagRequest),
+  })
+    .then(
+      async (r): Promise<State | JsonError> =>
+        r.ok
+          ? r.json()
+          : Promise.reject(
+              new Error(`HTTP ${r.status} error: ${await r.text()}`)
+            )
+    )
+    .then((resp) =>
+      "error" in resp ? Promise.reject(new Error(resp.error)) : resp
+    );
 
 export const getVideoUrl = (video: Video) =>
   new URL(`/v/${encodeURIComponent(video.path)}`, ROOT);
