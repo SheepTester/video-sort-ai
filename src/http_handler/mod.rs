@@ -27,14 +27,14 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => build_html_response(
             StatusCode::OK,
-            String::from(include_str!("./static/index.html")),
+            String::from(include_str!("../static/index.html")),
         ),
         (&Method::GET, "/index.css") => Ok(Response::builder()
             .status(StatusCode::OK)
             .header("Content-Type", "text/css")
             .header("Access-Control-Allow-Origin", CORS)
             .body(
-                Full::from(&include_bytes!("./static/index.css")[..])
+                Full::from(&include_bytes!("../static/index.css")[..])
                     .map_err(|e| match e {})
                     .boxed(),
             )?),
@@ -43,7 +43,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             .header("Content-Type", "text/javascript")
             .header("Access-Control-Allow-Origin", CORS)
             .body(
-                Full::from(&include_bytes!("./static/index.js")[..])
+                Full::from(&include_bytes!("../static/index.js")[..])
                     .map_err(|e| match e {})
                     .boxed(),
             )?),
@@ -52,7 +52,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             .header("Content-Type", "image/vnd.microsoft.icon")
             .header("Access-Control-Allow-Origin", CORS)
             .body(
-                Full::from(&include_bytes!("./static/favicon.ico")[..])
+                Full::from(&include_bytes!("../static/favicon.ico")[..])
                     .map_err(|e| match e {})
                     .boxed(),
             )?),
@@ -161,7 +161,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
         }
         (&Method::GET, path) => build_html_response(
             StatusCode::NOT_FOUND,
-            include_str!("./static/404.html").replace("{PATH}", &escape_html(path)),
+            include_str!("../static/404.html").replace("{PATH}", &escape_html(path)),
         ),
         (method, path) => build_text_response(
             StatusCode::METHOD_NOT_ALLOWED,
