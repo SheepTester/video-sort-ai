@@ -16,7 +16,7 @@ export function FeedItem({ video }: FeedItemProps) {
     const currentRef = ref.current;
     if (!currentRef) return;
 
-    let timeoutId: number | undefined;
+    let timeoutId: number | null = null;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -24,7 +24,7 @@ export function FeedItem({ video }: FeedItemProps) {
         if (entry.isIntersecting) {
           if (timeoutId) {
             clearTimeout(timeoutId);
-            timeoutId = undefined;
+            timeoutId = null;
           }
           setShouldMount(true);
         } else {
