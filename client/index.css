@@ -288,3 +288,7 @@ button:not(:disabled) {
     transparent
   );
 }
+
+.grid-view-navbar {
+  top: 60px;
+}

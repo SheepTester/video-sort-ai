@@ -16,7 +16,6 @@ type AppInnerProps = {
 function AppInner({ state }: AppInnerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>({
     mode: "grid",
-    columns: 5,
   });
   const [filter, setFilter] = useState<Filter>({ mode: "none" });
 
@@ -43,7 +42,7 @@ function AppInner({ state }: AppInnerProps) {
         tags={tags}
       />
       {viewMode.mode === "grid" ? (
-        <GridView columns={viewMode.columns} videos={videos} />
+        <GridView videos={videos} />
       ) : viewMode.mode === "list" ? (
         <ListView videos={videos} />
       ) : (

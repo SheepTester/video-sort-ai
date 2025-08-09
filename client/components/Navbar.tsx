@@ -30,15 +30,12 @@ export function Navbar({
       >
         FY
       </button>
-      {([2, 3, 4, 5] as const).map((columns) => (
-        <button
-          key={columns}
-          onClick={() => onViewMode({ mode: "grid", columns })}
-          disabled={viewMode.mode === "grid" && viewMode.columns === columns}
-        >
-          {columns}
-        </button>
-      ))}
+      <button
+        onClick={() => onViewMode({ mode: "grid" })}
+        disabled={viewMode.mode === "grid"}
+      >
+        Grid
+      </button>
       <select
         value={
           filter.mode === "with-tag" ? `with-tag:${filter.tag}` : filter.mode
