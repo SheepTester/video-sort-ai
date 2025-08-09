@@ -1,6 +1,6 @@
-import { addTag, removeTag, Video } from "../api";
+import { addTag, getVideoUrl, removeTag, Video } from "../api";
 import { useSetState } from "../contexts/state";
-import { formatSize } from "../util";
+import { extractFilename, formatSize } from "../util";
 
 export type TagEditProps = {
   video: Video;
@@ -50,6 +50,19 @@ export function TagEdit({ video }: TagEditProps) {
         <input name="tag" placeholder="add a tag" type="text" list="tags" />
         <button type="submit">+</button>
       </form>
+      <button
+        onClick={async () => {
+          const res = await fetch(getVideoUrl(video));
+          const blob = await res.blob();
+          const name = extractFilename(video.path);
+          const file = new File([blob], name, {
+            type: blob.type,
+          });
+          await navigator.share({ files: [file], title: name });
+        }}
+      >
+        📤
+      </button>
       <div className="size">{formatSize(video.size)}</div>
     </div>
   );

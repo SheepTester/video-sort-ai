@@ -8,11 +8,8 @@ import {
 } from "../api";
 import { useSetState } from "../contexts/state";
 import { useVideoContext } from "../contexts/video";
+import { extractFilename } from "../util";
 import { TagEdit } from "./TagEdit";
-
-function extractFilename(path: string) {
-  return path.split("/").pop() || path;
-}
 
 const fmt = new Intl.DateTimeFormat([], {
   dateStyle: "long",
