@@ -107,25 +107,7 @@ export function App() {
           video={state.videos.find((video) => video.path === videoPath) ?? null}
         />
         {errors.length > 0 && (
-          <div
-            style={{
-              position: "fixed",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              background: "lightcoral",
-              color: "black",
-              padding: "1em",
-              margin: 0,
-              zIndex: 9999,
-              maxHeight: "30vh",
-              overflowY: "auto",
-            }}
-          >
-            {errors.map((error, i) => (
-              <pre key={i}>{error.stack}</pre>
-            ))}
-          </div>
+          <pre>{errors.map((error) => error.stack).join("\n\n")}</pre>
         )}
       </VideoContextProvider>
     </SetStateContext.Provider>
