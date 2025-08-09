@@ -56,7 +56,7 @@ export function TagEdit({ video }: TagEditProps) {
           const blob = await res.blob();
           const name = extractFilename(video.path);
           const file = new File([blob], name, {
-            type: res.headers.get("content-type") || "video/mp4",
+            type: blob.type,
           });
           await navigator.share({ files: [file], title: name });
         }}
