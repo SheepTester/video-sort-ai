@@ -53,6 +53,10 @@ So basically, I have to use the Files app to see a stream of videos on device. I
 - Also oftentimes I don't want to delete a file right away, just mark it for deletion. Just in case I change my mind.
 - I want to categorize the videos first before uploading/deleting them. Less context switching.
 
+---
+
+it turns out that i have a lot of videos taken in groups that i want to join together. sometimes the aspect ratio is different too. so maybe it'd be good to invest in a lightweight video concatenater
+
 </details>
 
 ### Why Rust?
@@ -72,6 +76,23 @@ I want a CLI program that starts an HTTP server. In the browser, it will list ev
 - [ ] There should be an option to move videos between Termux storage and the Downloads folder by tag.
   - `termux-media-scan` will make the video visible to Android again.
 - [x] Dark theme.
+
+video editor user flow: 
+
+- it'll be on a separate page
+- select a tag
+- it'll show the video thumbnails and ask if you want to prepare editing
+- doing so requires re encoding the videos because h265 doesn't seem to be seekable in Chrome for some reason, and it might be smoother for buffering to use like 480p
+- it'll also get the original resolutions of each video. and the size of the preview video
+- once that's done it takes you to the video editor
+- here you select videos to add. it'll indicate which videos have been added already
+- you can crop a video. it'll indicate parts of the video used in other instances of the video. hopefully it'll let you preview the area around the start and end and let you move them frame by frame
+- the UI will include a timeline and playback and palette of videos. for simplicity i am not adding drag and drop
+- the timings will be saved locally
+- once you're done you can select the dimensions of the video—portrait landscape or square
+- then the backend will construct an ffmpeg filter on the real video files and cook
+- where will the output videos go?
+- on the tags page you can also delete by tag or rename tags. it'll also show the total size of the videos and their previews
 
 ## Development
 
