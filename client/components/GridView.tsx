@@ -8,7 +8,7 @@ type GridViewProps = {
 
 export function GridView({ videos }: GridViewProps) {
   const showVideo = useVideoContext();
-  const [columns, setColumns] = useState<number>(5);
+  const [columns, setColumns] = useState(5);
   return (
     <>
       <div className="navbar grid-view-navbar">
