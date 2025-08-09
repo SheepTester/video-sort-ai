@@ -1,14 +1,8 @@
 import { FormEvent, useState } from "react";
-import {
-  deleteVideo,
-  getThumbnailUrl,
-  removeTag,
-  setNote,
-  Video,
-} from "../api";
+import { deleteVideo, getThumbnailUrl, setNote, Video } from "../api";
 import { useSetState } from "../contexts/state";
 import { useVideoContext } from "../contexts/video";
-import { extractFilename } from "../util";
+import { extractFilename, formatSize } from "../util";
 import { TagEdit } from "./TagEdit";
 
 const fmt = new Intl.DateTimeFormat([], {
@@ -50,23 +44,26 @@ export function ListItem({ video }: ListItemProps) {
       </button>
       <div className="list-item-info">
         <div className="list-item-filename">
-          <span>{extractFilename(video.path)}</span>
-          <button onClick={handleCopyFilename}>Copy</button>
+          <span>
+            {extractFilename(video.path).replace(".mp4", "") + " "}
+            <button
+              onClick={() => {
+                if (confirm(`delete ${extractFilename(video.path)} fr?`)) {
+                  deleteVideo(video).then(setState);
+                }
+              }}
+              className="deletebtn"
+            >
+              Delete
+            </button>
+          </span>
+          <button onClick={handleCopyFilename}>📋</button>
         </div>
         <div className="time">
-          {fmt.format(video.mtime.secs_since_epoch * 1000)}
-          <button
-            onClick={() => {
-              if (confirm(`delete ${extractFilename(video.path)} fr?`)) {
-                deleteVideo(video).then(setState);
-              }
-            }}
-            className="deletebtn"
-          >
-            Delete
-          </button>
+          {fmt.format(video.mtime.secs_since_epoch * 1000)} &middot;{" "}
+          {formatSize(video.size)}
         </div>
-        <TagEdit video={video} />
+        <TagEdit video={video} hideSize />
         {/* <div className="list-item-note">
           {isEditing ? (
             <form onSubmit={handleSaveNote}>

@@ -7,25 +7,33 @@ import { Navbar } from "./components/Navbar";
 import { SetStateContext } from "./contexts/state";
 import { VideoContextProvider } from "./contexts/video";
 import { VideoModal } from "./components/VideoModal";
-import { Filter, ViewMode } from "./types";
+import { Filter, Sort, ViewMode } from "./types";
 
 type AppInnerProps = {
   state: State;
 };
 
 function AppInner({ state }: AppInnerProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>({
-    mode: "grid",
-  });
+  const [viewMode, setViewMode] = useState<ViewMode>({ mode: "grid" });
   const [filter, setFilter] = useState<Filter>({ mode: "none" });
+  const [sort, setSort] = useState<Sort>({ by: "mtime", desc: true });
 
-  const videos = (
-    filter.mode === "with-tag"
-      ? state.videos.filter((video) => video.tags.includes(filter.tag))
-      : filter.mode === "tagless"
-      ? state.videos.filter((video) => video.tags.length === 0)
-      : state.videos
-  ).toReversed();
+  const videos = useMemo(() => {
+    const videos =
+      filter.mode === "with-tag"
+        ? state.videos.filter((video) => video.tags.includes(filter.tag))
+        : filter.mode === "tagless"
+        ? state.videos.filter((video) => video.tags.length === 0)
+        : state.videos;
+    return videos.sort(
+      (a, b) =>
+        (sort.by === "mtime"
+          ? a.mtime.secs_since_epoch - b.mtime.secs_since_epoch ||
+            a.mtime.nanos_since_epoch - b.mtime.nanos_since_epoch
+          : a.size - b.size) * (sort.desc ? -1 : 1)
+    );
+  }, [state, filter, sort]);
+
   const tags = useMemo(
     () =>
       Array.from(new Set(state.videos.flatMap((video) => video.tags))).sort(),
@@ -39,6 +47,8 @@ function AppInner({ state }: AppInnerProps) {
         onViewMode={setViewMode}
         filter={filter}
         onFilter={setFilter}
+        sort={sort}
+        onSort={setSort}
         tags={tags}
       />
       {viewMode.mode === "grid" ? (

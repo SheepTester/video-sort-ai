@@ -1,11 +1,12 @@
-import { useId } from "react";
-import { Filter, ViewMode } from "../types";
+import { Filter, Sort, ViewMode } from "../types";
 
 type NavbarProps = {
   viewMode: ViewMode;
   onViewMode: (viewMode: ViewMode) => void;
   filter: Filter;
   onFilter: (filter: Filter) => void;
+  sort: Sort;
+  onSort: (sort: Sort) => void;
   tags: string[];
 };
 
@@ -14,6 +15,8 @@ export function Navbar({
   onViewMode,
   filter,
   onFilter,
+  sort,
+  onSort,
   tags,
 }: NavbarProps) {
   return (
@@ -22,13 +25,13 @@ export function Navbar({
         onClick={() => onViewMode({ mode: "list" })}
         disabled={viewMode.mode === "list"}
       >
-        Li
+        List
       </button>
       <button
         onClick={() => onViewMode({ mode: "feed" })}
         disabled={viewMode.mode === "feed"}
       >
-        FY
+        Feed
       </button>
       <button
         onClick={() => onViewMode({ mode: "grid" })}
@@ -36,6 +39,21 @@ export function Navbar({
       >
         Grid
       </button>
+      <select
+        value={`${sort.by}-${sort.desc ? "desc" : "asc"}`}
+        onChange={(e) => {
+          const [type, desc] = e.currentTarget.value.split("-");
+          onSort({
+            by: type === "mtime" ? "mtime" : "size",
+            desc: desc === "desc",
+          });
+        }}
+      >
+        <option value="mtime-desc">Newest first</option>
+        <option value="mtime-asc">Oldest first</option>
+        <option value="size-desc">Largest first</option>
+        <option value="size-asc">Smallest first</option>
+      </select>
       <select
         value={
           filter.mode === "with-tag" ? `with-tag:${filter.tag}` : filter.mode

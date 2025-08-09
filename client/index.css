@@ -23,6 +23,7 @@ button:not(:disabled) {
 .navbar {
   display: flex;
   padding: 8px;
+  gap: 8px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   box-sizing: border-box;
   height: 60px;
@@ -33,9 +34,8 @@ button:not(:disabled) {
 }
 
 .navbar button {
-  margin-right: 8px;
-  padding: 4px 0;
-  width: 40px;
+  padding: 4px 8px;
+  min-width: 40px;
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   background: Canvas;
   border-radius: 4px;
@@ -97,14 +97,14 @@ button:not(:disabled) {
   display: flex;
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   border-radius: 4px;
-  padding: 8px;
+  /* position: relative; */
+  align-items: center;
 }
 
 .list-item-thumbnail {
-  width: 100px;
-  height: 100px;
-  flex-shrink: 0;
-  margin-right: 16px;
+  width: 120px;
+  height: 120px;
+  flex: none;
 }
 
 .list-item-thumbnail img {
@@ -117,6 +117,7 @@ button:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 0 8px;
 }
 
 .list-item-filename {
@@ -124,11 +125,13 @@ button:not(:disabled) {
   align-items: start;
   gap: 8px;
   font-weight: bold;
+  word-break: break-all;
 }
 
 .list-item-filename button {
-  padding: 2px 4px;
+  padding: 2px;
   font-weight: normal;
+  flex: none;
 }
 
 .time {
@@ -137,8 +140,14 @@ button:not(:disabled) {
 }
 
 .deletebtn {
-  color: red;
-  padding: 0 4px;
+  color: oklch(70.5% 0.213 47.604);
+  background-color: oklch(70.5% 0.213 47.604 / 20%);
+  padding: 0 8px;
+  border-radius: 2px;
+  font-size: 0.8em;
+  /* position: absolute;
+  top: 0;
+  left: 0; */
 }
 
 .tags {
@@ -184,6 +193,15 @@ button:not(:disabled) {
   aspect-ratio: 1 / 1;
   background-color: color-mix(in srgb, currentColor 20%, transparent);
   border-radius: 50%;
+}
+
+.size {
+  font-size: 0.8em;
+  align-self: center;
+}
+
+.sharebtn {
+  padding: 4px;
 }
 
 .list-item-note input {
@@ -259,9 +277,14 @@ button:not(:disabled) {
 .closebtnform {
   margin-left: auto;
 }
+.modal .topbar {
+  border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
 .modal .topbar .closebtn {
-  width: 60px;
+  width: 40px;
   height: 60px;
+  font-size: 1.5em;
+  border-left: 1px solid color-mix(in srgb, currentColor 20%, transparent);
 }
 .modal video {
   height: 0;

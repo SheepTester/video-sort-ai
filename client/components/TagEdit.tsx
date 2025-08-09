@@ -4,9 +4,10 @@ import { extractFilename, formatSize } from "../util";
 
 export type TagEditProps = {
   video: Video;
+  hideSize?: boolean;
 };
 
-export function TagEdit({ video }: TagEditProps) {
+export function TagEdit({ video, hideSize }: TagEditProps) {
   const setState = useSetState();
 
   return (
@@ -50,6 +51,7 @@ export function TagEdit({ video }: TagEditProps) {
         <input name="tag" placeholder="add a tag" type="text" list="tags" />
         <button type="submit">+</button>
       </form>
+      {!hideSize && <div className="size">{formatSize(video.size)}</div>}
       <button
         onClick={async () => {
           const res = await fetch(getVideoUrl(video));
@@ -60,10 +62,10 @@ export function TagEdit({ video }: TagEditProps) {
           });
           await navigator.share({ files: [file], title: name });
         }}
+        className="sharebtn"
       >
         📤
       </button>
-      <div className="size">{formatSize(video.size)}</div>
     </div>
   );
 }
