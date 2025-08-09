@@ -17,6 +17,7 @@ pub struct Video {
     pub note: String,
     pub mtime: SystemTime,
     pub size: u64,
+    pub preview: Option<Preview>,
     /// currently unused, but will be used for stowing videos in Termux to avoid
     /// persecution by Google Photos
     pub stow_state: StowState,
@@ -25,6 +26,13 @@ pub struct Video {
 #[derive(Serialize, Deserialize, Debug)]
 pub enum StowState {
     Original,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Preview {
+    size: u64,
+    original_width: u32,
+    original_height: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

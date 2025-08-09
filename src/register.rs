@@ -83,6 +83,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                         note: String::new(),
                         mtime,
                         size,
+                        preview: None,
                         stow_state: StowState::Original,
                     });
                 }
