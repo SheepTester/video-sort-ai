@@ -7,8 +7,9 @@ use tokio::{
     sync::Semaphore,
 };
 
-use crate::common::{
-    format_size, BoxedError, MyResult, SharedState, StowState, Video, DIR_PATH, save_state,
+use crate::{
+    common::{DIR_PATH, SharedState, StowState, Video, save_state},
+    util::{BoxedError, MyResult, format_size},
 };
 
 const MAX_CONCURRENT_FFMPEG: usize = 10;

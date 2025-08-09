@@ -5,14 +5,16 @@ use hyper_util::rt::TokioIo;
 use tokio::{fs, net::TcpListener, sync::RwLock};
 
 use crate::{
-    common::{DIR_PATH, MyResult, SharedState, State, format_size},
+    common::{DIR_PATH, SharedState, State},
     http_handler::handle_request_wrapper,
     register::add_videos,
+    util::{MyResult, format_size},
 };
 
 mod common;
 mod http_handler;
 mod register;
+mod util;
 
 async fn start_server(state: SharedState) -> MyResult<()> {
     const PORT: u16 = 8008;

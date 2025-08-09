@@ -10,7 +10,10 @@ use serde::{Deserialize, Serialize};
 use tokio::fs::{self, File};
 use tokio_util::io::ReaderStream;
 
-use crate::common::{DIR_PATH, MyResult, SharedState, save_state};
+use crate::{
+    common::{DIR_PATH, SharedState, save_state},
+    util::MyResult,
+};
 
 const CORS: &str = "http://127.0.0.1:8000";
 
