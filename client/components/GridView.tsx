@@ -12,7 +12,7 @@ export function GridView({ videos }: GridViewProps) {
   return (
     <>
       <div className="navbar grid-view-navbar">
-        {[2, 3, 4, 5].map((columnOption) => (
+        {[2, 3, 4, 5, 6].map((columnOption) => (
           <button
             key={columnOption}
             onClick={() => setColumns(columnOption)}

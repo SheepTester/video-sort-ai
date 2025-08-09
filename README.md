@@ -65,13 +65,13 @@ Plus, I already have a build-and-release GitHub Action set up from [hotspot-drop
 
 I want a CLI program that starts an HTTP server. In the browser, it will list every video chronologically.
 
-- [ ] You can preview each video in the browser.
+- [x] You can preview each video in the browser.
 - [x] You can assign each video lightweight tags and notes.
 - [x] I might need to generate thumbnails for every video with `ffmpeg` (which I think I have installed on my phone).
-- [ ] There should be an option to permanently videos individually or by tag.
+- [x] There should be an option to permanently videos individually or by tag.
 - [ ] There should be an option to move videos between Termux storage and the Downloads folder by tag.
-  - [ ] `termux-media-scan` will make the video visible to Android again.
-- [ ] Dark theme.
+  - `termux-media-scan` will make the video visible to Android again.
+- [x] Dark theme.
 
 ## Development
 

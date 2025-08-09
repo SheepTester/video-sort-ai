@@ -34,7 +34,7 @@ button:not(:disabled) {
 }
 
 .navbar button {
-  padding: 4px 8px;
+  padding: 0 8px;
   min-width: 40px;
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   background: Canvas;
@@ -314,4 +314,5 @@ button:not(:disabled) {
 
 .grid-view-navbar {
   top: 60px;
+  height: 40px;
 }
