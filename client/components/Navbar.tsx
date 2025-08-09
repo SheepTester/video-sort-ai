@@ -1,5 +1,3 @@
-import { renameTag } from "../api";
-import { useSetState } from "../contexts/state";
 import { Filter, Sort, ViewMode } from "../types";
 
 type NavbarProps = {
@@ -21,7 +19,6 @@ export function Navbar({
   onSort,
   tags,
 }: NavbarProps) {
-  const setState = useSetState();
   return (
     <div className="navbar">
       <button
@@ -57,17 +54,6 @@ export function Navbar({
         <option value="size-desc">Largest first</option>
         <option value="size-asc">Smallest first</option>
       </select>
-      <button
-        onClick={() => {
-          const oldTag = prompt("Tag to rename:");
-          if (!oldTag) return;
-          const newTag = prompt(`New name for ${oldTag}:`);
-          if (!newTag) return;
-          renameTag(oldTag, newTag).then(setState);
-        }}
-      >
-        Rename tag
-      </button>
       <select
         value={
           filter.mode === "with-tag" ? `with-tag:${filter.tag}` : filter.mode
