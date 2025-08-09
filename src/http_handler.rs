@@ -1,75 +1,27 @@
 use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
 
 use futures_util::TryStreamExt;
-use http_body_util::{BodyExt, Full, StreamBody, combinators::BoxBody};
+use http_body_util::{BodyExt, Full, StreamBody};
 use hyper::{
     Method, Request, Response, StatusCode,
     body::{Buf, Bytes, Frame},
 };
-use serde::{Deserialize, Serialize};
 use tokio::fs::{self, File};
 use tokio_util::io::ReaderStream;
 
 use crate::{
     common::{DIR_PATH, SharedState, save_state},
-    util::MyResult,
+    http_handler::{
+        defs::{DeleteRequest, JsonError, VideoMetadataEditReq},
+        util::{
+            CORS, MyResponse, build_html_response, build_json_response, build_text_response,
+            escape_html,
+        },
+    },
 };
 
-const CORS: &str = "http://127.0.0.1:8000";
-
-type MyResponse = MyResult<Response<BoxBody<Bytes, std::io::Error>>>;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct VideoMetadataEditReq {
-    thumbnail_name: String,
-    tag_or_note: String,
-}
-
-#[derive(Deserialize, Debug)]
-enum DeleteRequest {
-    Thumbnail(String),
-    Tag(String),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct JsonError {
-    error: String,
-}
-
-fn escape_html(text: &str) -> String {
-    text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-}
-
-fn build_text_response(status: StatusCode, message: String) -> MyResponse {
-    Ok(Response::builder()
-        .status(status)
-        .header("Content-Type", "text/plain")
-        .header("Access-Control-Allow-Origin", CORS)
-        .body(Full::from(message).map_err(|e| match e {}).boxed())?)
-}
-
-fn build_html_response(status: StatusCode, message: String) -> MyResponse {
-    Ok(Response::builder()
-        .status(status)
-        .header("Content-Type", "text/html")
-        .header("Access-Control-Allow-Origin", CORS)
-        .body(Full::from(message).map_err(|e| match e {}).boxed())?)
-}
-
-fn build_json_response<T: Serialize>(object: &T) -> MyResponse {
-    Ok(Response::builder()
-        .status(StatusCode::OK)
-        .header("Content-Type", "application/json")
-        .header("Access-Control-Allow-Origin", CORS)
-        .body(
-            Full::from(serde_json::to_string(object)?)
-                .map_err(|e| match e {})
-                .boxed(),
-        )?)
-}
+mod defs;
+mod util;
 
 async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState) -> MyResponse {
     match (req.method(), req.uri().path()) {
