@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { getVideoUrl, getThumbnailUrl, Video } from "../api";
+import { Video } from "../api";
 import { TagEdit } from "./TagEdit";
+import { Video as VideoComp } from "./Video";
 
 type FeedItemProps = {
   video: Video;
@@ -54,25 +55,12 @@ export function FeedItem({ video }: FeedItemProps) {
     }
   }, [isIntersecting]);
 
-  const thumbnailUrl = getThumbnailUrl(video);
-  const videoUrl = getVideoUrl(video);
-
   return (
     <div ref={ref} className="feed-item">
       <div className="tagswraper">
         <TagEdit video={video} />
       </div>
-      {shouldMount && (
-        <video
-          className="feed-video"
-          src={videoUrl.toString()}
-          controls
-          loop
-          poster={thumbnailUrl.toString()}
-          preload="none"
-          ref={videoRef}
-        />
-      )}
+      {shouldMount && <VideoComp video={video} videoRef={videoRef} />}
     </div>
   );
 }

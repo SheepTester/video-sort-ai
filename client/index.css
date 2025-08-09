@@ -225,9 +225,34 @@ button:not(:disabled) {
   padding-bottom: 20px;
 }
 
+.feed-video-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
 .feed-video {
   width: 100%;
   height: 100%;
+}
+
+.speed {
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  touch-action: none;
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  user-select: none;
+}
+.sped-up {
+  background-color: white;
+  color: black;
 }
 
 .modal {
@@ -286,13 +311,13 @@ button:not(:disabled) {
   font-size: 1.5em;
   border-left: 1px solid color-mix(in srgb, currentColor 20%, transparent);
 }
-.modal video {
+.modal .feed-video-wrapper {
   height: 0;
   flex: auto;
   transform: scale(0.9);
   transition: transform 0.2s;
 }
-.modal[open] video {
+.modal[open] .feed-video-wrapper {
   transform: scale(1);
 }
 

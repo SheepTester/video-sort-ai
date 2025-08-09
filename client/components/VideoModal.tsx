@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { getThumbnailUrl, getVideoUrl, Video } from "../api";
+import { Video } from "../api";
 import { TagEdit } from "./TagEdit";
+import { Video as VideoComp } from "./Video";
 
 export type VideoModalProps = {
   open: boolean;
@@ -31,16 +32,7 @@ export function VideoModal({ open, onClose, video }: VideoModalProps) {
           </button>
         </form>
       </div>
-      {video && (
-        <video
-          className="feed-video"
-          src={getVideoUrl(video).toString()}
-          controls
-          loop
-          poster={getThumbnailUrl(video).toString()}
-          ref={videoRef}
-        />
-      )}
+      {video && <VideoComp video={video} videoRef={videoRef} />}
     </dialog>
   );
 }
