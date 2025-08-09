@@ -6,15 +6,13 @@ type GridViewProps = {
   videos: Video[];
 };
 
-const COLUMN_OPTIONS = [2, 3, 4, 5] as const;
-
 export function GridView({ videos }: GridViewProps) {
   const showVideo = useVideoContext();
-  const [columns, setColumns] = useState<(typeof COLUMN_OPTIONS)[number]>(5);
+  const [columns, setColumns] = useState<number>(5);
   return (
     <>
-      <div className="navbar">
-        {COLUMN_OPTIONS.map((columnOption) => (
+      <div className="navbar grid-view-navbar">
+        {[2, 3, 4, 5].map((columnOption) => (
           <button
             key={columnOption}
             onClick={() => setColumns(columnOption)}
