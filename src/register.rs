@@ -9,6 +9,7 @@ use tokio::{
 
 use crate::{
     common::{DIR_PATH, SharedState, StowState, Video, save_state},
+    fmt::faded,
     util::{BoxedError, MyResult, format_size},
 };
 
@@ -51,7 +52,10 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     "{}.jpg",
                     sanitize_filename::sanitize(path.as_os_str().to_string_lossy())
                 );
-                eprintln!("Creating thumbnail for {file_name}...");
+                eprintln!(
+                    "{}",
+                    faded(&format!("Creating thumbnail for {file_name}..."))
+                );
                 let ffmpeg_result = Command::new("ffmpeg")
                     .arg("-i")
                     .arg(path.clone())
@@ -65,7 +69,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     .output()
                     .await?;
                 if ffmpeg_result.status.success() {
-                    println!("+ {file_name} ({})", format_size(size));
+                    println!("{file_name} ({})", format_size(size));
                 } else {
                     eprintln!("Failed to create thumbnail for {file_name}.");
                     io::stderr().write_all(&ffmpeg_result.stderr).await?;

@@ -1,4 +1,11 @@
-use std::{io::ErrorKind, net::SocketAddr, process::exit, sync::Arc};
+use std::{
+    env::current_exe,
+    io::ErrorKind,
+    net::SocketAddr,
+    process::exit,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use hyper::{server::conn::http1, service::service_fn};
 use hyper_util::rt::TokioIo;
@@ -6,7 +13,7 @@ use tokio::{fs, net::TcpListener, sync::RwLock};
 
 use crate::{
     common::{DIR_PATH, SharedState, State},
-    fmt::{bold, link},
+    fmt::{bold, code, link},
     http_handler::handle_request_wrapper,
     register::add_videos,
     util::{MyResult, format_size},
@@ -76,13 +83,15 @@ async fn main() -> MyResult<()> {
                 let video_count = videos.len();
                 let total_size: u64 = videos.iter().map(|v| v.size).sum();
                 eprintln!(
-                    "I'm tracking {video_count} videos ({} total). Run `{program_name} add <path>` to add more.",
-                    format_size(total_size)
+                    "I'm tracking {video_count} videos ({} total). Run {} to add more.",
+                    format_size(total_size),
+                    code(&format!("{program_name} add <path>"))
                 );
                 if video_count == 0 {
                     eprintln!(
-                        "{}: Run `{program_name} help` for a list of commands.",
-                        bold("Tip")
+                        "{}: Run {} for a list of commands.",
+                        bold("Tip"),
+                        code(&format!("{program_name} help"))
                     );
                 }
             }
@@ -90,26 +99,32 @@ async fn main() -> MyResult<()> {
         }
         Some("add") => {
             let Some(path) = add_path else {
-                eprintln!("Missing path: `{program_name} add <path>`");
+                eprintln!(
+                    "Missing path: {}",
+                    code(&format!("{program_name} add <path>"))
+                );
                 exit(2);
             };
             add_videos(&path, sharable_state).await?;
         }
-        Some("version") => {
+        Some("version" | "-v" | "--version") => {
             println!("{}", include_str!("./static/version.txt"));
         }
-        Some("help") => {
+        Some("help" | "-h" | "--help") => {
             eprintln!("{}", bold("Available commands"));
-            eprintln!("$ {program_name}");
+            eprintln!("$ {}", code(&program_name));
             eprintln!("| Start the web server.");
-            eprintln!("$ {program_name} add <path>");
+            eprintln!("$ {}", code(&format!("{program_name} add <path>")));
             eprintln!("| Registers all .mp4 files in the given directory");
             eprintln!("| (shallow).");
-            eprintln!("$ {program_name} version");
+            eprintln!("$ {}", code(&format!("{program_name} update")));
+            eprintln!("| Outputs a shell command to overwrite the program file");
+            eprintln!("| with the latest version.");
+            eprintln!("$ {}", code(&format!("{program_name} version")));
             eprintln!("| Print the program version.");
-            eprintln!("$ {program_name} about");
+            eprintln!("$ {}", code(&format!("{program_name} about")));
             eprintln!("| Display information about this software.");
-            eprintln!("$ {program_name} help");
+            eprintln!("$ {}", code(&format!("{program_name} help")));
             eprintln!("| Display this list.");
         }
         Some("about") => {
@@ -127,9 +142,25 @@ async fn main() -> MyResult<()> {
                 link("https://github.com/SheepTester/video-sort-ai")
             );
         }
+        Some("update" | "up" | "upgrade") => {
+            let path = current_exe()?;
+            println!(
+                "curl -L https://github.com/SheepTester/video-sort-ai/releases/latest/download/video-sort?_={} > {:?}",
+                SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis(),
+                path
+            );
+            eprintln!(
+                "{}: Run {} to overwrite {:?}",
+                bold("Tip"),
+                code(&format!("eval `{program_name} up`")),
+                path
+            );
+        }
         Some(arg) => {
             eprintln!(
-                "Unknown argument `{arg}`. Run `{program_name} help` for a list of commands."
+                "Unknown argument {}. Run {} for a list of commands.",
+                code(arg),
+                code(&format!("{program_name} help"))
             );
             exit(2);
         }
