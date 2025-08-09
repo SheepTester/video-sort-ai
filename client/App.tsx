@@ -69,14 +69,14 @@ function AppInner({ state }: AppInnerProps) {
 
 export function App() {
   const [state, setState] = useState<State | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+  const [errors, setErrors] = useState<Error[]>([]);
   useEffect(() => {
     getList().then(setState);
     const errorListener = (e: ErrorEvent) => {
-      setError(e.error);
+      setErrors((errors) => [...errors, e.error]);
     };
     const rejectionListener = (e: PromiseRejectionEvent) => {
-      setError(e.reason);
+      setErrors((errors) => [...errors, e.reason]);
     };
     window.addEventListener("error", errorListener);
     window.addEventListener("unhandledrejection", rejectionListener);
@@ -106,8 +106,8 @@ export function App() {
           onClose={() => setVideoOpen(false)}
           video={state.videos.find((video) => video.path === videoPath) ?? null}
         />
-        {error && (
-          <pre
+        {errors.length > 0 && (
+          <div
             style={{
               position: "fixed",
               bottom: 0,
@@ -118,10 +118,14 @@ export function App() {
               padding: "1em",
               margin: 0,
               zIndex: 9999,
+              maxHeight: "30vh",
+              overflowY: "auto",
             }}
           >
-            {error.stack}
-          </pre>
+            {errors.map((error, i) => (
+              <pre key={i}>{error.stack}</pre>
+            ))}
+          </div>
         )}
       </VideoContextProvider>
     </SetStateContext.Provider>
