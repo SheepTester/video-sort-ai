@@ -1,3 +1,7 @@
+export function extractFilename(path: string) {
+  return path.split("/").pop() || path;
+}
+
 export function formatSize(bytes: number): string {
   const k = 1000;
   if (bytes < k) {
