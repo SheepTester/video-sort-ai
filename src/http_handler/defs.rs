@@ -6,6 +6,12 @@ pub struct VideoMetadataEditReq {
     pub tag_or_note: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RenameTagRequest {
+    pub old: String,
+    pub new: String,
+}
+
 #[derive(Deserialize, Debug)]
 pub enum DeleteRequest {
     Thumbnail(String),

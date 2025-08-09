@@ -12,7 +12,7 @@ use tokio_util::io::ReaderStream;
 use crate::{
     common::{DIR_PATH, SharedState, save_state},
     http_handler::{
-        defs::{DeleteRequest, JsonError, VideoMetadataEditReq},
+        defs::{DeleteRequest, JsonError, RenameTagRequest, VideoMetadataEditReq},
         util::{
             CORS, MyResponse, build_html_response, build_json_response, build_text_response,
             escape_html,
@@ -81,6 +81,20 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 }
                 save_state(&*state.read().await).await?;
             }
+            build_json_response(&*state.read().await)
+        }
+        (&Method::POST, "/tag/rename") => {
+            let request: RenameTagRequest =
+                serde_json::from_reader(req.collect().await?.aggregate().reader())?;
+            {
+                let mut state = state.write().await;
+                for video in &mut state.videos {
+                    if video.tags.remove(&request.old) {
+                        video.tags.insert(request.new.clone());
+                    }
+                }
+            }
+            save_state(&*state.read().await).await?;
             build_json_response(&*state.read().await)
         }
         (&Method::OPTIONS, _) => Ok(Response::builder()
