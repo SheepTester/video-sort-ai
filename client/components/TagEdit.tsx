@@ -52,7 +52,7 @@ export function TagEdit({ video }: TagEditProps) {
       </form>
       <button
         onClick={async () => {
-          const res = await fetch(getVideoUrl(video).toString());
+          const res = await fetch(getVideoUrl(video));
           const blob = await res.blob();
           const name = extractFilename(video.path);
           const file = new File([blob], name, {
