@@ -34,6 +34,7 @@ pub struct Preview {
     pub size: u64,
     pub original_width: u32,
     pub original_height: u32,
+    pub original_duration: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

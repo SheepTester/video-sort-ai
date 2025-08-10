@@ -7,6 +7,7 @@ import { formatSeconds } from "../util";
 type TrimmerProps = {
   clip: Clip;
   video: Video;
+  duration: number;
   otherClips: Clip[];
   onUpdate: (newClip: Clip) => void;
   onClose: () => void;
@@ -15,6 +16,7 @@ type TrimmerProps = {
 export function Trimmer({
   clip,
   video,
+  duration,
   otherClips,
   onUpdate,
   onClose,
@@ -26,7 +28,7 @@ export function Trimmer({
     // Basic validation
     if (field === "start" && newValue >= clip.end) return;
     if (field === "end" && newValue <= clip.start) return;
-    if (newValue < 0 || newValue > video.original_duration) return;
+    if (newValue < 0 || newValue > duration) return;
 
     onUpdate({ ...clip, [field]: newValue });
   };
@@ -74,7 +76,7 @@ export function Trimmer({
         <div className="range-slider-container">
           <RangeSlider
             min={0}
-            max={video.original_duration}
+            max={duration}
             start={clip.start}
             end={clip.end}
             onStartChange={(newStart) => onUpdate({ ...clip, start: newStart })}
@@ -82,11 +84,9 @@ export function Trimmer({
           />
           <div className="other-clips-ranges">
             {otherClips.map((otherClip, i) => {
-              const startPercent =
-                (otherClip.start / video.original_duration) * 100;
+              const startPercent = (otherClip.start / duration) * 100;
               const widthPercent =
-                ((otherClip.end - otherClip.start) / video.original_duration) *
-                100;
+                ((otherClip.end - otherClip.start) / duration) * 100;
               return (
                 <div
                   key={i}
@@ -118,7 +118,7 @@ export function Trimmer({
           </div>
         </div>
         <div className="trimmer-info">
-          Original Duration: {formatSeconds(video.original_duration)}
+          Original Duration: {formatSeconds(duration)}
         </div>
       </div>
     </div>

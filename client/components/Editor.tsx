@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { State, Video } from "../api";
+import { createPreviewList, State } from "../api";
 import { getThumbnailUrl } from "../api";
 import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
 import { ProjectState, Clip } from "../types";
+import { useSetState } from "../contexts/state";
 
 export type EditorProps = {
   state: State;
@@ -15,6 +16,7 @@ export function Editor({ state, tag }: EditorProps) {
     uninitialized: true,
   });
   const [trimmingClip, setTrimmingClip] = useState<Clip | null>(null);
+  const setState = useSetState();
 
   useEffect(() => {
     const project = localStorage.getItem(`video-sort/project/${tag}`);
@@ -35,26 +37,10 @@ export function Editor({ state, tag }: EditorProps) {
     [state, tag]
   );
 
-  const videoMap: Record<string, Video> = useMemo(
-    () =>
-      Object.fromEntries(state.videos.map((video) => [video.path, video])),
+  const videoMap = useMemo(
+    () => Object.fromEntries(state.videos.map((video) => [video.path, video])),
     [state.videos]
   );
-
-  const addClip = (video: Video) => {
-    setProjectState((p) => ({
-      ...p,
-      clips: [
-        ...p.clips,
-        {
-          id: crypto.randomUUID(),
-          path: video.path,
-          start: 0,
-          end: video.original_duration,
-        },
-      ],
-    }));
-  };
 
   const moveClip = (clipId: string, direction: "left" | "right") => {
     setProjectState((p) => {
@@ -77,6 +63,7 @@ export function Editor({ state, tag }: EditorProps) {
       <Trimmer
         clip={trimmingClip}
         video={video}
+        duration={video.preview?.original_duration ?? 0}
         otherClips={projectState.clips.filter(
           (c) => c.path === trimmingClip.path && c.id !== trimmingClip.id
         )}
@@ -101,14 +88,34 @@ export function Editor({ state, tag }: EditorProps) {
           <div
             key={video.path}
             className="palette-item"
-            onClick={() => addClip(video)}
+            onClick={() => {
+              if (video.preview) {
+                const duration = video.preview.original_duration;
+                setProjectState((p) => ({
+                  ...p,
+                  clips: [
+                    ...p.clips,
+                    {
+                      id: crypto.randomUUID(),
+                      path: video.path,
+                      start: 0,
+                      end: duration,
+                    },
+                  ],
+                }));
+              }
+            }}
           >
             <img src={getThumbnailUrl(video).toString()} />
             {projectState.clips.some((c) => c.path === video.path) && (
-              <div className="used-indicator" />
+              <div className="used-indicator">✔️</div>
             )}
+            {!video.preview && <div className="unavail-indicator">⛔</div>}
           </div>
         ))}
+        <button onClick={() => createPreviewList(tag).then(setState)}>
+          Prepare previews
+        </button>
       </div>
       <div className="timeline">
         {projectState.clips.length === 0 && (

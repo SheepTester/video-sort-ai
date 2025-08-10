@@ -8,7 +8,12 @@ export type Video = {
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
   stowed: boolean;
   size: number;
-  original_duration: number;
+  preview?: {
+    size: number;
+    original_width: number;
+    original_height: number;
+    original_duration: number;
+  } | null;
 };
 export type State = {
   videos: Video[];
@@ -88,3 +93,15 @@ const deleteVideos = (request: DeleteRequest) =>
 
 export const deleteVideo = (video: Video) =>
   deleteVideos({ Thumbnail: video.thumbnail_name });
+
+export const createPreviewList = (tag: string) =>
+  fetch(new URL("/preview", ROOT), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ tag }),
+  }).then(
+    async (r): Promise<State> =>
+      r.ok
+        ? r.json()
+        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
+  );

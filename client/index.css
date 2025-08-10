@@ -409,15 +409,11 @@ button:not(:disabled) {
   border-radius: 4px;
 }
 
-.used-indicator {
+.used-indicator,
+.unavail-indicator {
   position: absolute;
   top: 4px;
   right: 4px;
-  width: 10px;
-  height: 10px;
-  background-color: #ff4757;
-  border-radius: 50%;
-  border: 1px solid white;
 }
 
 .timeline {
@@ -532,7 +528,8 @@ button:not(:disabled) {
   gap: 8px;
 }
 
-.time-adjust button, .preview-actions button {
+.time-adjust button,
+.preview-actions button {
   border: 1px solid #555;
   border-radius: 4px;
   padding: 8px;

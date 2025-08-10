@@ -6,6 +6,8 @@ use hyper::{
     Method, Request, Response, StatusCode,
     body::{Buf, Bytes, Frame},
 };
+use serde::Deserialize;
+use serde_json::from_str;
 use tokio::{
     fs::{self, File, metadata},
     io::{self, AsyncWriteExt},
@@ -30,6 +32,23 @@ use crate::{
 
 mod defs;
 mod util;
+
+#[derive(Deserialize, Debug)]
+struct FfprobeOutputStream {
+    width: u32,
+    height: u32,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeOutputFormat {
+    duration: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeOutput {
+    streams: (FfprobeOutputStream,),
+    format: FfprobeOutputFormat,
+}
 
 async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState) -> MyResponse {
     match (req.method(), req.uri().path()) {
@@ -121,6 +140,11 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     }
                 })
                 .collect::<Vec<_>>();
+            eprintln!(
+                "Generating {} preview videos for tag {}",
+                videos.len(),
+                request.tag,
+            );
             let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FFMPEG));
             let handles = videos
                 .into_iter()
@@ -137,8 +161,8 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             .arg("v:0") // select one video stream
                             .arg("-show_entries")
                             .arg("stream=width,height") // only print width and height
-                            .arg("-of")
-                            .arg("csv=s=x:p=0") // output format: CSV with separator x
+                            .arg("-output_format")
+                            .arg("json")
                             .arg(&video.path)
                             .output()
                             .await?;
@@ -148,12 +172,11 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                 video.path.file_name(),
                                 String::from_utf8_lossy(&ffprobe_result.stderr)
                             );
-                            return Ok::<(), BoxedError>(());
+                            Err("ffprobe error")?;
                         }
-                        let ffprobe_output = String::from_utf8_lossy(&ffprobe_result.stdout);
-                        let (width, height) = ffprobe_output
-                            .split_once('x')
-                            .ok_or("no x in ffprobe output")?;
+                        let ffprobe_output: FfprobeOutput =
+                            from_str(&String::from_utf8(ffprobe_result.stdout)?)?;
+                        println!("{:?}", ffprobe_output);
 
                         let preview_path =
                             format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name);
@@ -178,7 +201,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         if !ffmpeg_result.status.success() {
                             eprintln!("Failed to create preview for {:?}.", video.path.file_name());
                             io::stderr().write_all(&ffmpeg_result.stderr).await?;
-                            return Ok::<(), BoxedError>(());
+                            Err("ffmpeg preview error")?;
                         }
                         let size = metadata(&preview_path).await?.len();
                         eprintln!(
@@ -196,8 +219,9 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                 .ok_or("cant find video i was making preview for")?
                                 .preview = Some(Preview {
                                 size,
-                                original_width: width.parse()?,
-                                original_height: height.parse()?,
+                                original_width: ffprobe_output.streams.0.width,
+                                original_height: ffprobe_output.streams.0.height,
+                                original_duration: ffprobe_output.format.duration.parse()?,
                             });
                         }
                         save_state(&*state.read().await).await?;
@@ -211,6 +235,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
                 };
             }
+            eprintln!("Preview generation complete");
             build_json_response(&*state.read().await)
         }
         (&Method::OPTIONS, _) => Ok(Response::builder()
