@@ -203,6 +203,10 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             // 16kbps and 32kbps sound basically just as bad
                             .arg("-b:a")
                             .arg("16k")
+                            // make video seekable
+                            .arg("-movflags")
+                            .arg("+faststart")
+                            .arg("-y")
                             // unspecified video and audio codec defaults to
                             // h264 and aac for mp4
                             .arg(&preview_path)
@@ -257,23 +261,23 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
         (&Method::POST, "/cook") => {
             let request: CookReq =
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
+            let out_path = format!("./{}.mp4", request.name);
             let mut command = Command::new("ffmpeg");
             // only log errors and stats
             command.arg("-v").arg("error");
             command.arg("-stats");
             {
                 let state = state.read().await;
-                make_filter(&state, &request, &mut command, "./test.mp4")?;
+                make_filter(&state, &request, &mut command, &out_path)?;
             }
 
             eprintln!("[cook] Cooking...");
             let ffmpeg_result = command.status().await?;
             if !ffmpeg_result.success() {
                 eprintln!("[cook] ffmpeg failure");
-                // io::stderr().write_all(&ffmpeg_result.stderr).await?;
                 Err("ffmpeg failure")?;
             }
-            eprintln!("[cook] Bon appetit!");
+            eprintln!("[cook] Bon appetit! {out_path}");
 
             Ok(Response::builder()
                 .status(StatusCode::NO_CONTENT)

@@ -282,9 +282,12 @@ export function Editor({ state, tag }: EditorProps) {
                 end,
                 thumbnail_name: thumb,
               })),
-              parseSize(size)
+              parseSize(size),
+              `video-sort-${tag}`
             )
-              .then(setState)
+              .then(() => {
+                alert(`Successfully saved to video-sort-${tag}.mp4 in Termux.`);
+              })
               .finally(() => setLoading(false));
           }}
           className="prepare-btn"

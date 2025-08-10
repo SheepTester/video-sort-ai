@@ -40,4 +40,5 @@ pub struct CookReq {
     pub clips: Vec<Clip>,
     pub width: u32,
     pub height: u32,
+    pub name: String,
 }

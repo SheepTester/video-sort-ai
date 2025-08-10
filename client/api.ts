@@ -116,11 +116,11 @@ export type CookClip = {
 
 export type Size = { width: number; height: number };
 
-export const cook = (clips: CookClip[], size: Size) =>
+export const cook = (clips: CookClip[], size: Size, name: string) =>
   fetch(new URL("/cook", ROOT), {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ clips, ...size }),
+    body: JSON.stringify({ clips, ...size, name }),
   }).then(
     async (r): Promise<State> =>
       r.ok

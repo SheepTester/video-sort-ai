@@ -51,6 +51,7 @@ function Trimmer_({
     if (newValue < 0 || newValue > duration) return;
 
     onUpdate({ ...clip, [field]: newValue });
+    if (videoRef.current) videoRef.current.currentTime = newValue;
   };
 
   const preview = (type: "start" | "end") => {
@@ -63,15 +64,15 @@ function Trimmer_({
     } else {
       videoEl.currentTime = Math.max(clip.start, clip.end - 0.5);
       videoEl.play();
-      // Stop playback at the end time
-      const stopPlayback = () => {
-        if (videoEl.currentTime >= clip.end) {
-          videoEl.pause();
-          videoEl.ontimeupdate = null;
-        }
-      };
-      videoEl.ontimeupdate = stopPlayback;
     }
+    // Stop playback at the end time
+    const stopPlayback = () => {
+      if (videoEl.currentTime >= clip.end) {
+        videoEl.pause();
+        videoEl.ontimeupdate = null;
+      }
+    };
+    videoEl.ontimeupdate = stopPlayback;
   };
 
   return (
@@ -102,8 +103,14 @@ function Trimmer_({
             max={duration}
             start={clip.start}
             end={clip.end}
-            onStartChange={(newStart) => onUpdate({ ...clip, start: newStart })}
-            onEndChange={(newEnd) => onUpdate({ ...clip, end: newEnd })}
+            onStartChange={(newStart) => {
+              onUpdate({ ...clip, start: newStart });
+              if (videoRef.current) videoRef.current.currentTime = newStart;
+            }}
+            onEndChange={(newEnd) => {
+              onUpdate({ ...clip, end: newEnd });
+              if (videoRef.current) videoRef.current.currentTime = newEnd;
+            }}
           />
           <div className="other-clips-ranges">
             {otherClips.map((otherClip, i) => {

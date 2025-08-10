@@ -65,6 +65,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     // lowest quality
                     .arg("-q")
                     .arg("20")
+                    .arg("-y")
                     .arg(format!("{DIR_PATH}/thumbs/{thumbnail_name}"))
                     .output()
                     .await?;
