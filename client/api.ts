@@ -8,6 +8,7 @@ export type Video = {
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
   stowed: boolean;
   size: number;
+  original_duration: number;
 };
 export type State = {
   videos: Video[];
