@@ -34,6 +34,7 @@ export function Video({ videoRef, video }: VideoProps) {
           if (pointerId.current === null) {
             if (videoRef.current) videoRef.current.playbackRate = 2;
             pointerId.current = e.pointerId;
+            e.currentTarget.setPointerCapture(e.pointerId);
             setSpeedUp(true);
           }
         }}

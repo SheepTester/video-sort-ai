@@ -246,7 +246,7 @@ button:not(:disabled) {
   background-color: rgba(0, 0, 0, 0.5);
   touch-action: none;
   position: absolute;
-  top: 80px;
+  top: 50%;
   right: 20px;
   user-select: none;
 }
@@ -340,4 +340,19 @@ button:not(:disabled) {
 .grid-view-navbar {
   top: 60px;
   height: 40px;
+}
+
+.select-tag {
+  display: flex;
+  flex-direction: column;
+}
+.select-tag p {
+  margin: 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  padding: 20px;
+}
+.select-tag button {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
 }
