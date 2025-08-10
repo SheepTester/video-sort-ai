@@ -75,12 +75,12 @@ export function Editor({ state, tag }: EditorProps) {
     }));
   }, []);
   const handleClose = useCallback(() => setTrimmingClip(null), []);
-  if (clip && videoMap[clip.thumb].preview) {
+  if (clip && videoMap[clip.thumb].preview2) {
     trimmerModal = (
       <Trimmer
         clip={clip}
         video={videoMap[clip.thumb]}
-        duration={videoMap[clip.thumb].preview?.original_duration ?? 0}
+        duration={videoMap[clip.thumb].preview2?.original_duration ?? 0}
         otherClips={otherClips}
         onUpdate={handleUpdate}
         open={trimmingClip !== null}
@@ -107,8 +107,8 @@ export function Editor({ state, tag }: EditorProps) {
       )
       .reduce(
         (a, b) => ({
-          width: Math.max(a.width, b.preview?.original_width ?? 0),
-          height: Math.max(a.height, b.preview?.original_height ?? 0),
+          width: Math.max(a.width, b.preview2?.original_width ?? 0),
+          height: Math.max(a.height, b.preview2?.original_height ?? 0),
         }),
         { width: 0, height: 0 }
       );
@@ -116,9 +116,9 @@ export function Editor({ state, tag }: EditorProps) {
       new Set<SizeStr>([
         `${maxSize.width}x${maxSize.height}`,
         ...videos.flatMap((video): SizeStr[] =>
-          video.preview
+          video.preview2
             ? [
-                `${video.preview.original_width}x${video.preview.original_height}`,
+                `${video.preview2.original_width}x${video.preview2.original_height}`,
               ]
             : []
         ),
@@ -217,8 +217,8 @@ export function Editor({ state, tag }: EditorProps) {
             key={video.thumbnail_name}
             className="palette-item"
             onClick={() => {
-              if (video.preview) {
-                const duration = video.preview.original_duration;
+              if (video.preview2) {
+                const duration = video.preview2.original_duration;
                 setProjectState((p) => ({
                   ...p,
                   clips: [
@@ -233,13 +233,13 @@ export function Editor({ state, tag }: EditorProps) {
                 }));
               }
             }}
-            disabled={!video.preview}
+            disabled={!video.preview2}
           >
             <img src={getThumbnailUrl(video).toString()} />
             {projectState.clips.some(
               (c) => c.thumb === video.thumbnail_name
             ) && <div className="used-indicator">✅</div>}
-            {!video.preview && <div className="unavail-indicator">⛔</div>}
+            {!video.preview2 && <div className="unavail-indicator">⛔</div>}
           </button>
         ))}
         <button
@@ -250,7 +250,7 @@ export function Editor({ state, tag }: EditorProps) {
               .finally(() => setLoading(false));
           }}
           className="prepare-btn"
-          disabled={videos.every((video) => video.preview) || loading}
+          disabled={videos.every((video) => video.preview2) || loading}
         >
           Prepare previews
         </button>

@@ -21,6 +21,10 @@ pub fn make_filter(
     command: &mut Command,
     output_path: &str,
 ) -> MyResult<()> {
+    // disable auto handling of rotated videos, just in case (I don't think it
+    // does)
+    command.arg("-noautorotate");
+
     let clips = request
         .clips
         .iter()
@@ -61,6 +65,11 @@ pub fn make_filter(
             "[{clip_index}:v] trim = start={} : end={}, setpts=PTS-STARTPTS",
             clip.start, clip.end
         ));
+        match clip.preview.original_rotation {
+            crate::common::Rotation::Unrotated => {}
+            crate::common::Rotation::Neg90 => filters.push_str("transpose=2"),
+            crate::common::Rotation::Pos90 => filters.push_str("transpose=1"),
+        }
         if need_bg {
             filters.push_str(&format!(
                 ", split [clip{i}v_trimmed] [clip{i}v_trimmed_copy]; "

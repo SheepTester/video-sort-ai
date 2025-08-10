@@ -10,7 +10,7 @@ export type Video = {
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
   stowed: boolean;
   size: number;
-  preview?: {
+  preview2?: {
     size: number;
     original_width: number;
     original_height: number;

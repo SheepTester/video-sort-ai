@@ -80,17 +80,17 @@ I want a CLI program that starts an HTTP server. In the browser, it will list ev
 Video editor user flow:
 
 - [x] it'll be on a separate page
-- [ ] select a tag
-- [ ] it'll show the video thumbnails and ask if you want to prepare editing
+- [x] select a tag
+- [x] it'll show the video thumbnails and ask if you want to prepare editing
 - [x] doing so requires re encoding the videos because h265 doesn't seem to be seekable in Chrome for some reason, and it might be smoother for buffering to use like 480p
 - [x] it'll also get the original resolutions of each video. and the size of the preview video
-- [ ] once that's done it takes you to the video editor
-- [ ] here you select videos to add. it'll indicate which videos have been added already
-- [ ] you can crop a video. it'll indicate parts of the video used in other instances of the video. hopefully it'll let you preview the area around the start and end and let you move them frame by frame
-- [ ] the UI will include a timeline and playback and palette of videos. for simplicity i am not adding drag and drop
-- [ ] the timings will be saved locally
-- [ ] once you're done you can select the dimensions of the video—portrait landscape or square
-- [ ] then the backend will construct an ffmpeg filter on the real video files and cook
+- [x] once that's done it takes you to the video editor
+- [x] here you select videos to add. it'll indicate which videos have been added already
+- [x] you can crop a video. it'll indicate parts of the video used in other instances of the video. hopefully it'll let you preview the area around the start and end and let you move them frame by frame
+- [x] the UI will include a timeline and playback and palette of videos. for simplicity i am not adding drag and drop
+- [x] the timings will be saved locally
+- [x] once you're done you can select the dimensions of the video—portrait landscape or square
+- [x] then the backend will construct an ffmpeg filter on the real video files and cook
 - [ ] where will the output videos go?
 - [ ] on the tags page you can also delete by tag or rename tags. it'll also show the total size of the videos and their previews
 

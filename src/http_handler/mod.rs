@@ -41,6 +41,12 @@ mod util;
 struct FfprobeOutputStream {
     width: u32,
     height: u32,
+    side_data_list: Option<(FfprobeOutputStreamSideData,)>,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeOutputStreamSideData {
+    rotation: i32,
 }
 
 #[derive(Deserialize, Debug)]
@@ -231,6 +237,22 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             format_size(size)
                         );
 
+                        let (original_width, original_height) = match ffprobe_output
+                            .streams
+                            .0
+                            .side_data_list
+                            .as_ref()
+                            .map(|list| list.0.rotation)
+                        {
+                            Some(rot) if rot != 0 => (
+                                ffprobe_output.streams.0.height,
+                                ffprobe_output.streams.0.width,
+                            ),
+                            _ => (
+                                ffprobe_output.streams.0.width,
+                                ffprobe_output.streams.0.height,
+                            ),
+                        };
                         {
                             let mut state = state.write().await;
                             state
@@ -240,9 +262,19 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                 .ok_or("cant find video i was making preview for")?
                                 .preview = Some(Preview {
                                 size,
-                                original_width: ffprobe_output.streams.0.width,
-                                original_height: ffprobe_output.streams.0.height,
+                                original_width,
+                                original_height,
                                 original_duration: ffprobe_output.format.duration.parse()?,
+                                original_rotation: match (ffprobe_output).streams.0.side_data_list {
+                                    Some((FfprobeOutputStreamSideData { rotation: 90 },)) => {
+                                        crate::common::Rotation::Pos90
+                                    }
+                                    Some((FfprobeOutputStreamSideData { rotation: -90 },)) => {
+                                        crate::common::Rotation::Neg90
+                                    }
+                                    None => crate::common::Rotation::Unrotated,
+                                    Some(r) => Err(format!("Unknown rotation {}", r.0.rotation))?,
+                                },
                             });
                         }
                         save_state(&*state.read().await).await?;

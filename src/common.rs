@@ -18,6 +18,7 @@ pub struct Video {
     pub note: String,
     pub mtime: SystemTime,
     pub size: u64,
+    #[serde(rename = "preview2")]
     pub preview: Option<Preview>,
     /// currently unused, but will be used for stowing videos in Termux to avoid
     /// persecution by Google Photos
@@ -35,6 +36,14 @@ pub struct Preview {
     pub original_width: u32,
     pub original_height: u32,
     pub original_duration: f64,
+    pub original_rotation: Rotation,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum Rotation {
+    Unrotated,
+    Neg90,
+    Pos90,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
