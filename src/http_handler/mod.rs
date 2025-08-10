@@ -193,6 +193,19 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         }
                         let ffprobe_output: FfprobeOutput =
                             from_str(&String::from_utf8(ffprobe_result.stdout)?)?;
+                        let original_rotation = match &ffprobe_output.streams.0.side_data_list {
+                            Some((FfprobeOutputStreamSideData { rotation: 90 },)) => {
+                                crate::common::Rotation::Pos90
+                            }
+                            Some((FfprobeOutputStreamSideData { rotation: -90 },)) => {
+                                crate::common::Rotation::Neg90
+                            }
+                            Some((FfprobeOutputStreamSideData { rotation: -180 },)) => {
+                                crate::common::Rotation::Neg180
+                            }
+                            None => crate::common::Rotation::Unrotated,
+                            Some(r) => Err(format!("Unknown rotation {}", r.0.rotation))?,
+                        };
 
                         let preview_path =
                             format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name);
@@ -268,16 +281,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                 original_width,
                                 original_height,
                                 original_duration: ffprobe_output.format.duration.parse()?,
-                                original_rotation: match (ffprobe_output).streams.0.side_data_list {
-                                    Some((FfprobeOutputStreamSideData { rotation: 90 },)) => {
-                                        crate::common::Rotation::Pos90
-                                    }
-                                    Some((FfprobeOutputStreamSideData { rotation: -90 },)) => {
-                                        crate::common::Rotation::Neg90
-                                    }
-                                    None => crate::common::Rotation::Unrotated,
-                                    Some(r) => Err(format!("Unknown rotation {}", r.0.rotation))?,
-                                },
+                                original_rotation,
                             });
                         }
                         save_state(&*state.read().await).await?;

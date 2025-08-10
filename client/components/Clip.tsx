@@ -18,7 +18,15 @@ export function Clip({ ends, clip, video, onClick, onMove }: ClipProps) {
       <div
         className="clip-thumbnail-wrapper"
         onClick={onClick}
-        data-rot={rot === "Neg90" ? "↻" : rot === "Pos90" ? "↺" : ""}
+        data-rot={
+          rot === "Neg90"
+            ? "↻"
+            : rot === "Pos90"
+            ? "↺"
+            : rot === "Neg180"
+            ? "🙃"
+            : ""
+        }
         data-dur={
           clip.start === 0 && clip.end === video.preview2?.original_duration
             ? "Full"

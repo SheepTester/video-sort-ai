@@ -3,6 +3,7 @@ import {
   cook,
   createPreviewList,
   getPreviewUrl,
+  isTransposed,
   Size,
   State,
   Video,
@@ -121,7 +122,7 @@ export function Editor({ state, tag }: EditorProps) {
       const clipRot = clip.overrideRotation ?? origRot;
       const { original_width = 0, original_height = 0 } = video.preview2 ?? {};
       // transposed
-      return (origRot === "Unrotated") === (clipRot === "Unrotated")
+      return isTransposed(origRot) === isTransposed(clipRot)
         ? { width: original_width, height: original_height }
         : { width: original_height, height: original_width };
     };

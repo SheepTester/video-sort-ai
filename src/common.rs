@@ -79,6 +79,18 @@ pub enum Rotation {
     Unrotated,
     Neg90,
     Pos90,
+    Neg180,
+}
+
+impl Rotation {
+    pub fn transposed(&self) -> bool {
+        match self {
+            Rotation::Unrotated => false,
+            Rotation::Neg90 => true,
+            Rotation::Pos90 => true,
+            Rotation::Neg180 => false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

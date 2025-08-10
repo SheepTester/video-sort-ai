@@ -1,5 +1,5 @@
 import { CSSProperties, memo, useEffect, useRef } from "react";
-import { Video } from "../api";
+import { Rotation, Video } from "../api";
 import { Clip } from "../types";
 import { RangeSlider } from "./RangeSlider";
 import { formatSeconds } from "../util";
@@ -15,7 +15,12 @@ type TrimmerProps = {
   onClose: () => void;
 };
 
-const rotToAngle = { Unrotated: 0, Neg90: -90, Pos90: 90 };
+const rotToAngle: Record<Rotation, number> = {
+  Unrotated: 0,
+  Neg90: -90,
+  Pos90: 90,
+  Neg180: 180,
+};
 
 function Trimmer_({
   clip,
@@ -161,7 +166,12 @@ function Trimmer_({
             value={clipRot}
             onChange={(e) => {
               const val = e.currentTarget.value;
-              if (val === "Unrotated" || val === "Neg90" || val === "Pos90") {
+              if (
+                val === "Unrotated" ||
+                val === "Neg90" ||
+                val === "Pos90" ||
+                val === "Neg180"
+              ) {
                 if (
                   video.preview2 &&
                   val !== video.preview2.original_rotation
@@ -175,6 +185,7 @@ function Trimmer_({
             <option value="Unrotated">Unrotated</option>
             <option value="Neg90">↻ 90&deg;</option>
             <option value="Pos90">↺ 90&deg;</option>
+            <option value="Neg180">180&deg;</option>
           </select>
           <button onClick={() => preview("end")}>Play near End</button>
         </div>

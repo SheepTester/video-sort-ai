@@ -18,7 +18,9 @@ export type Video = {
     original_duration: number;
   } | null;
 };
-export type Rotation = "Unrotated" | "Neg90" | "Pos90";
+export type Rotation = "Unrotated" | "Neg90" | "Pos90" | "Neg180";
+export const isTransposed = (rot: Rotation) =>
+  rot === "Neg90" || rot === "Pos90";
 export type State = {
   videos: Video[];
 };
