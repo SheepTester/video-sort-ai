@@ -176,7 +176,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             .arg("v:0")
                             // only print these fields
                             .arg("-show_entries")
-                            .arg("stream=width,height:format=duration")
+                            .arg("stream=width,height:format=duration:stream_side_data=rotation")
                             .arg("-output_format")
                             .arg("json")
                             .arg(&video.path)
