@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ffi::OsStr, sync::Arc};
+use std::{ffi::OsStr, sync::Arc};
 
 use tokio::{
     fs::{self, metadata},
@@ -8,7 +8,7 @@ use tokio::{
 };
 
 use crate::{
-    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, SharedState, StowState, Video, save_state},
+    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, SharedState, Video, save_state},
     fmt::faded,
     util::{BoxedError, MyResult, format_size},
 };
@@ -21,7 +21,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
             if path.extension() == Some(&OsStr::new("mp4"))
-                && !videos.iter().any(|video| video.path == path)
+                && !videos.iter().any(|video| *video.current_loc() == path)
             {
                 paths.push(path);
             }
@@ -77,16 +77,9 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                 }
                 {
                     let mut state = state.write().await;
-                    state.videos.push(Video {
-                        path,
-                        thumbnail_name,
-                        tags: HashSet::new(),
-                        note: String::new(),
-                        mtime,
-                        size,
-                        preview: None,
-                        stow_state: StowState::Original,
-                    });
+                    state
+                        .videos
+                        .push(Video::new(path, thumbnail_name, mtime, size));
                 }
                 save_state(&*state.read().await).await?;
                 Ok::<(), BoxedError>(())

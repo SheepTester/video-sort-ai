@@ -31,6 +31,9 @@ Then, run
 
 And go to http://localhost:8008/
 
+> [!TIP]
+> Keep the screen on while cooking a video.
+
 ## Why
 
 <details>

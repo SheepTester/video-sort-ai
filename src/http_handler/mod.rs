@@ -117,8 +117,8 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             .await?;
                     }
                     fs::remove_file(&format!("{DIR_PATH}/thumbs/{}", video.thumbnail_name)).await?;
-                    fs::remove_file(&video.path).await?;
-                    println!("D {:?}", video.path);
+                    fs::remove_file(&video.current_loc()).await?;
+                    println!("D {:?}", video.display_name());
                 }
                 save_state(&*state.read().await).await?;
             }
@@ -166,7 +166,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             let handles = videos
                 .into_iter()
                 .map(|video| {
-                    let path_clone = video.path.clone();
+                    let display_name = video.display_name();
                     let state = state.clone();
                     let semaphore = semaphore.clone();
                     let handle = tokio::spawn(async move {
@@ -183,11 +183,11 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             .arg("stream=width,height:format=duration:stream_side_data=rotation")
                             .arg("-output_format")
                             .arg("json")
-                            .arg(&video.path)
+                            .arg(video.current_loc())
                             .output()
                             .await?;
                         if !ffprobe_result.status.success() {
-                            eprintln!("[preview] ffprobe error in {:?}", video.path.file_name());
+                            eprintln!("[preview] ffprobe error in {}", video.display_name());
                             io::stderr().write_all(&ffprobe_result.stderr).await?;
                             Err("ffprobe error")?;
                         }
@@ -198,7 +198,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name);
                         let ffmpeg_result = Command::new("ffmpeg")
                             .arg("-i")
-                            .arg(&video.path)
+                            .arg(video.current_loc())
                             // fairly low quality
                             .arg("-crf")
                             .arg("32")
@@ -214,9 +214,11 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                     "scale=-2:144"
                                 },
                             )
-                            // 16kbps and 32kbps sound basically just as bad
+                            // there is a noticeable improvement from 32k to
+                            // 64k. 16k/32k has a nice aesthetic but voices are
+                            // not intelligible
                             .arg("-b:a")
-                            .arg("16k")
+                            .arg("64k")
                             // make video seekable
                             .arg("-movflags")
                             .arg("+faststart")
@@ -228,18 +230,14 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             .await?;
                         if !ffmpeg_result.status.success() {
                             eprintln!(
-                                "[preview] Failed to create preview for {:?}.",
-                                video.path.file_name()
+                                "[preview] Failed to create preview for {}.",
+                                video.display_name()
                             );
                             io::stderr().write_all(&ffmpeg_result.stderr).await?;
                             Err("ffmpeg preview error")?;
                         }
                         let size = metadata(&preview_path).await?.len();
-                        eprintln!(
-                            "[preview] {:?} ({})",
-                            video.path.file_name(),
-                            format_size(size)
-                        );
+                        eprintln!("[preview] {} ({})", video.display_name(), format_size(size));
 
                         let (original_width, original_height) = match ffprobe_output
                             .streams
@@ -262,7 +260,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             state
                                 .videos
                                 .iter_mut()
-                                .find(|v| v.path == video.path)
+                                .find(|v| v.thumbnail_name == video.thumbnail_name)
                                 .ok_or("cant find video i was making preview for")?
                                 .preview = Some(Preview {
                                 size,
@@ -284,22 +282,19 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         save_state(&*state.read().await).await?;
                         Ok::<(), BoxedError>(())
                     });
-                    (path_clone, handle)
+                    (display_name, handle)
                 })
                 .collect::<Vec<_>>();
-            for (path, handle) in handles {
+            for (display_name, handle) in handles {
                 match handle.await {
                     Err(err) => {
                         eprintln!(
-                            "[preview] Unexpected join error in {:?}: {err:?}.",
-                            path.file_name()
+                            "[preview] Unexpected join error in {}: {err:?}.",
+                            display_name
                         );
                     }
                     Ok(Err(err)) => {
-                        eprintln!(
-                            "[preview] Unexpected error in {:?}: {err:?}.",
-                            path.file_name()
-                        );
+                        eprintln!("[preview] Unexpected error in {}: {err:?}.", display_name);
                     }
                     Ok(Ok(_)) => {}
                 }

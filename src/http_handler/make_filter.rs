@@ -31,7 +31,7 @@ pub fn make_filter(
                 .find(|video| video.thumbnail_name == clip.thumbnail_name)
                 .and_then(|video| {
                     video.preview.as_ref().map(|preview| CookClip {
-                        video_path: &video.path,
+                        video_path: video.current_loc(),
                         preview: &preview,
                         start: clip.start,
                         end: clip.end,
