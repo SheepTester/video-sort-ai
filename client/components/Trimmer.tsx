@@ -3,6 +3,7 @@ import { getPreviewUrl, Video } from "../api";
 import { Clip } from "../types";
 import { RangeSlider } from "./RangeSlider";
 import { formatSeconds } from "../util";
+import { Video as VideoComp } from "./Video";
 
 type TrimmerProps = {
   clip: Clip;
@@ -10,6 +11,7 @@ type TrimmerProps = {
   duration: number;
   otherClips: Clip[];
   onUpdate: (newClip: Clip) => void;
+  open: boolean;
   onClose: () => void;
 };
 
@@ -19,9 +21,27 @@ export function Trimmer({
   duration,
   otherClips,
   onUpdate,
+  open,
   onClose,
 }: TrimmerProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      dialogRef.current?.showModal();
+      if (videoRef.current) {
+        videoRef.current.currentTime = clip.start;
+        videoRef.current.play();
+      }
+    } else {
+      dialogRef.current?.close();
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.ontimeupdate = null;
+      }
+    }
+  }, [open]);
 
   const changeTime = (field: "start" | "end", delta: number) => {
     const newValue = clip[field] + delta;
@@ -47,25 +67,28 @@ export function Trimmer({
       const stopPlayback = () => {
         if (videoEl.currentTime >= clip.end) {
           videoEl.pause();
-          videoEl.removeEventListener("timeupdate", stopPlayback);
+          videoEl.ontimeupdate = null;
         }
       };
-      videoEl.addEventListener("timeupdate", stopPlayback);
+      videoEl.ontimeupdate = stopPlayback;
     }
   };
 
   return (
-    <div className="trimmer-container">
-      <div className="trimmer-header">
-        <button onClick={onClose}>&lt; Back</button>
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      className="modal trimmer-container"
+    >
+      <form method="dialog" className="trimmer-header">
+        <button onClick={onClose} type="submit">
+          &lt; Back
+        </button>
         <h3>Trim Clip</h3>
+      </form>
+      <div className="trimmer-preview">
+        <VideoComp video={video} videoRef={videoRef} preview />
       </div>
-      <video
-        ref={videoRef}
-        className="trimmer-preview"
-        src={getPreviewUrl(video).toString()}
-        controls={false}
-      />
       <div className="trimmer-controls">
         <div className="trimmer-info">
           <div>Start: {formatSeconds(clip.start)}</div>
@@ -107,20 +130,20 @@ export function Trimmer({
             <span>Start</span>
             <button onClick={() => changeTime("start", 1 / 60)}>+1/60</button>
           </div>
-          <div className="preview-actions">
-            <button onClick={() => preview("start")}>Play from Start</button>
-            <button onClick={() => preview("end")}>Play near End</button>
-          </div>
           <div className="time-adjust">
             <button onClick={() => changeTime("end", -1 / 60)}>-1/60</button>
             <span>End</span>
             <button onClick={() => changeTime("end", 1 / 60)}>+1/60</button>
           </div>
         </div>
+        <div className="preview-actions">
+          <button onClick={() => preview("start")}>Play from Start</button>
+          <button onClick={() => preview("end")}>Play near End</button>
+        </div>
         <div className="trimmer-info">
           Original Duration: {formatSeconds(duration)}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

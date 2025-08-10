@@ -1,5 +1,6 @@
 import { getThumbnailUrl, Video } from "../api";
 import { Clip } from "../types";
+import { formatSeconds } from "../util";
 
 type ClipProps = {
   ends: [canLeft: boolean, canRight: boolean];
@@ -12,7 +13,11 @@ type ClipProps = {
 export function Clip({ ends, clip, video, onClick, onMove }: ClipProps) {
   return (
     <div className="clip-item">
-      <div className="clip-thumbnail-wrapper" onClick={onClick}>
+      <div
+        className="clip-thumbnail-wrapper"
+        onClick={onClick}
+        data-dur={formatSeconds(clip.end - clip.start)}
+      >
         <img
           className="clip-thumbnail"
           src={getThumbnailUrl(video).toString()}

@@ -23,7 +23,7 @@ export function VideoModal({ open, onClose, video }: VideoModalProps) {
   }, [open]);
 
   return (
-    <dialog ref={dialogRef} onClose={onClose} className="modal">
+    <dialog ref={dialogRef} onClose={onClose} className="modal vmodal">
       <div className="topbar">
         {video && <TagEdit video={video} />}
         <form method="dialog" className="closebtnform">

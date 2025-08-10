@@ -1,13 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { State } from "../api";
-import { Editor } from "./Editor";
 
-export type EditAppProps = {
+export type TagSelectProps = {
   state: State;
 };
-export function TagSelect({ state }: EditAppProps) {
-  const [tag, setTag] = useState<string | null>(null);
-
+export function TagSelect({ state }: TagSelectProps) {
   const tags = useMemo(() => {
     const tags: Record<string, number> = {};
     for (const video of state.videos) {
@@ -19,18 +16,14 @@ export function TagSelect({ state }: EditAppProps) {
     return Object.entries(tags).sort((a, b) => a[0].localeCompare(b[0]));
   }, [state]);
 
-  if (!tag) {
-    return (
-      <div className="select-tag">
-        <p>Select a tag</p>
-        {tags.map(([tag, count]) => (
-          <button key={tag} onClick={() => setTag(tag)}>
-            <span>{tag}</span> <span>({count})</span>
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  return <Editor state={state} tag={tag} />;
+  return (
+    <div className="select-tag">
+      <p>Select a tag</p>
+      {tags.map(([tag, count]) => (
+        <a key={tag} href={"?" + new URLSearchParams({ edit: "", tag })}>
+          <span>{tag}</span> <span>({count})</span>
+        </a>
+      ))}
+    </div>
+  );
 }

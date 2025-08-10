@@ -280,9 +280,11 @@ button:not(:disabled) {
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+}
+.vmodal {
   /* for android home button */
   padding-bottom: 20px;
-  box-sizing: border-box;
 }
 .modal[open] {
   visibility: visible;
@@ -294,35 +296,35 @@ button:not(:disabled) {
   background: none;
 }
 
-.modal .topbar {
+.vmodal .topbar {
   flex: none;
   display: flex;
   height: 60px;
   align-items: center;
 }
-.modal .tags {
+.vmodal .tags {
   flex: auto;
   padding-left: 20px;
 }
 .closebtnform {
   margin-left: auto;
 }
-.modal .topbar {
+.vmodal .topbar {
   border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
 }
-.modal .topbar .closebtn {
+.vmodal .topbar .closebtn {
   width: 40px;
   height: 60px;
   font-size: 1.5em;
   border-left: 1px solid color-mix(in srgb, currentColor 20%, transparent);
 }
-.modal .feed-video-wrapper {
+.vmodal .feed-video-wrapper {
   height: 0;
   flex: auto;
   transform: scale(0.9);
   transition: transform 0.2s;
 }
-.modal[open] .feed-video-wrapper {
+.vmodal[open] .feed-video-wrapper {
   transform: scale(1);
 }
 
@@ -356,10 +358,11 @@ button:not(:disabled) {
   border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   padding: 20px;
 }
-.select-tag button {
+.select-tag a {
   padding: 20px;
   display: flex;
   justify-content: space-between;
+  text-decoration: none;
 }
 
 .editor-container {
@@ -440,10 +443,6 @@ button:not(:disabled) {
   background-color: #1a1a1a;
 }
 
-.timeline-placeholder {
-  color: #555;
-}
-
 .clip-item {
   display: flex;
   flex-direction: column;
@@ -455,6 +454,14 @@ button:not(:disabled) {
 .clip-thumbnail-wrapper {
   position: relative;
   cursor: pointer;
+}
+
+.clip-thumbnail-wrapper::before {
+  content: attr(data-dur);
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  font-size: 0.8em;
 }
 
 .clip-thumbnail {
@@ -500,11 +507,12 @@ button:not(:disabled) {
 
 .trimmer-header h3 {
   margin: 0;
+  font-size: 1em;
 }
 
 .trimmer-preview {
-  width: 100%;
-  flex: 1;
+  height: 0;
+  flex: auto;
   background-color: #000;
 }
 
@@ -512,7 +520,7 @@ button:not(:disabled) {
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .trimmer-info {
@@ -553,11 +561,13 @@ button:not(:disabled) {
 .preview-actions {
   display: flex;
   gap: 8px;
+  justify-content: center;
 }
 
 .range-slider-track {
   position: relative;
-  height: 20px;
+  height: 10px;
+  margin: 10px 0;
   background-color: #444;
   border-radius: 10px;
   touch-action: none;
@@ -571,8 +581,9 @@ button:not(:disabled) {
 }
 
 .range-slider-handle {
+  box-sizing: border-box;
   position: absolute;
-  top: -5px;
+  top: -10px;
   width: 30px;
   height: 30px;
   background-color: white;

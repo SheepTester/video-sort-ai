@@ -15,8 +15,10 @@ export function Editor({ state, tag }: EditorProps) {
     clips: [],
     uninitialized: true,
   });
-  const [trimmingClip, setTrimmingClip] = useState<Clip | null>(null);
+  const [trimmingClip, setTrimmingClip] = useState<string | null>(null);
+  const [lastTrimmingClip, setLastTrimmingClip] = useState<string | null>(null);
   const setState = useSetState();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const project = localStorage.getItem(`video-sort/project/${tag}`);
@@ -42,15 +44,18 @@ export function Editor({ state, tag }: EditorProps) {
     [state.videos]
   );
 
-  if (trimmingClip) {
-    const video = videoMap[trimmingClip.path];
-    return (
+  const currentClip = trimmingClip ?? lastTrimmingClip;
+  const clip =
+    currentClip && projectState.clips.find((clip) => clip.id === currentClip);
+  let trimmerModal;
+  if (clip && videoMap[clip.path].preview) {
+    trimmerModal = (
       <Trimmer
-        clip={trimmingClip}
-        video={video}
-        duration={video.preview?.original_duration ?? 0}
+        clip={clip}
+        video={videoMap[clip.path]}
+        duration={videoMap[clip.path].preview?.original_duration ?? 0}
         otherClips={projectState.clips.filter(
-          (c) => c.path === trimmingClip.path && c.id !== trimmingClip.id
+          (c) => c.path === clip.path && c.id !== clip.id
         )}
         onUpdate={(newClip) => {
           setProjectState((p) => ({
@@ -58,6 +63,7 @@ export function Editor({ state, tag }: EditorProps) {
             clips: p.clips.map((c) => (c.id === newClip.id ? newClip : c)),
           }));
         }}
+        open={trimmingClip !== null}
         onClose={() => setTrimmingClip(null)}
       />
     );
@@ -65,13 +71,11 @@ export function Editor({ state, tag }: EditorProps) {
 
   return (
     <div className="editor-container">
+      {trimmerModal}
       <div className="preview-area">
         <div className="preview-placeholder">Preview</div>
       </div>
       <div className="timeline">
-        {projectState.clips.length === 0 && (
-          <div className="timeline-placeholder">Timeline</div>
-        )}
         {projectState.clips.map((clip, i) => {
           const video = videoMap[clip.path];
           return (
@@ -80,8 +84,12 @@ export function Editor({ state, tag }: EditorProps) {
               ends={[i > 0, i < projectState.clips.length - 1]}
               clip={clip}
               video={video}
-              onClick={() => setTrimmingClip(clip)}
+              onClick={() => {
+                setTrimmingClip(clip.id);
+                setLastTrimmingClip(clip.id);
+              }}
               onMove={(clipId, direction) => {
+                if (direction === "del" && !confirm("delete clip?")) return;
                 setProjectState((p) => {
                   if (direction === "del") {
                     return {
@@ -134,13 +142,18 @@ export function Editor({ state, tag }: EditorProps) {
           >
             <img src={getThumbnailUrl(video).toString()} />
             {projectState.clips.some((c) => c.path === video.path) && (
-              <div className="used-indicator">✔️</div>
+              <div className="used-indicator">✅</div>
             )}
             {!video.preview && <div className="unavail-indicator">⛔</div>}
           </button>
         ))}
         <button
-          onClick={() => createPreviewList(tag).then(setState)}
+          onClick={() => {
+            setLoading(true);
+            createPreviewList(tag)
+              .then(setState)
+              .finally(() => setLoading(false));
+          }}
           className="prepare-btn"
           disabled={videos.every((video) => video.preview)}
         >

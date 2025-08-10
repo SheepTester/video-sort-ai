@@ -1,11 +1,12 @@
 import { PointerEvent, RefObject, useRef, useState } from "react";
-import { getThumbnailUrl, getVideoUrl, Video } from "../api";
+import { getPreviewUrl, getThumbnailUrl, getVideoUrl, Video } from "../api";
 
 export type VideoProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
   video: Video;
+  preview?: boolean;
 };
-export function Video({ videoRef, video }: VideoProps) {
+export function Video({ videoRef, video, preview }: VideoProps) {
   const pointerId = useRef<number | null>(null);
   const [speedUp, setSpeedUp] = useState(false);
 
@@ -21,7 +22,7 @@ export function Video({ videoRef, video }: VideoProps) {
     <div className="feed-video-wrapper">
       <video
         className="feed-video"
-        src={getVideoUrl(video).toString()}
+        src={(preview ? getPreviewUrl(video) : getVideoUrl(video)).toString()}
         controls
         loop
         poster={getThumbnailUrl(video).toString()}
