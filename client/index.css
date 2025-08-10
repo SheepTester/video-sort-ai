@@ -8,6 +8,12 @@ body {
   font-family: sans-serif;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 button {
   border: none;
   background: none;
@@ -18,6 +24,9 @@ button {
 }
 button:not(:disabled) {
   cursor: pointer;
+}
+:disabled {
+  opacity: 0.5;
 }
 
 .navbar {
@@ -39,10 +48,6 @@ button:not(:disabled) {
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   background: Canvas;
   border-radius: 4px;
-}
-
-.navbar button:disabled {
-  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .navbar select {
@@ -358,9 +363,9 @@ button:not(:disabled) {
 }
 
 .editor-container {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px); /* Full height minus navbar */
   background-color: #111;
 }
 
@@ -384,7 +389,7 @@ button:not(:disabled) {
 }
 
 .palette {
-  flex: 0 0 120px;
+  flex: none;
   display: flex;
   gap: 8px;
   padding: 8px;
@@ -396,8 +401,8 @@ button:not(:disabled) {
 
 .palette-item {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -412,12 +417,21 @@ button:not(:disabled) {
 .used-indicator,
 .unavail-indicator {
   position: absolute;
-  top: 4px;
+  bottom: 4px;
   right: 4px;
 }
 
+.prepare-btn {
+  flex: none;
+  align-self: center;
+  background-color: color-mix(in srgb, currentColor 20%, transparent);
+  padding: 4px 0;
+  width: 80px;
+  border-radius: 4px;
+}
+
 .timeline {
-  flex: 0 0 140px;
+  flex: none;
   padding: 8px;
   overflow-x: auto;
   display: flex;
@@ -434,7 +448,7 @@ button:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: 120px;
+  width: 100px;
   flex-shrink: 0;
 }
 
@@ -445,7 +459,7 @@ button:not(:disabled) {
 
 .clip-thumbnail {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 4px;
   display: block;
@@ -454,13 +468,14 @@ button:not(:disabled) {
 .clip-actions {
   display: flex;
   justify-content: space-between;
+  gap: 4px;
 }
 
 .clip-actions button {
-  flex-grow: 1;
+  flex: 1 0 0;
   border: 1px solid #555;
   border-radius: 4px;
-  padding: 4px;
+  padding: 4px0;
 }
 
 .trimmer-container {

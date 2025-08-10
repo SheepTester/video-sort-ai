@@ -42,21 +42,6 @@ export function Editor({ state, tag }: EditorProps) {
     [state.videos]
   );
 
-  const moveClip = (clipId: string, direction: "left" | "right") => {
-    setProjectState((p) => {
-      const clips = [...p.clips];
-      const index = clips.findIndex((c) => c.id === clipId);
-      if (index === -1) return p;
-
-      const newIndex = direction === "left" ? index - 1 : index + 1;
-      if (newIndex < 0 || newIndex >= clips.length) return p;
-
-      const [movedClip] = clips.splice(index, 1);
-      clips.splice(newIndex, 0, movedClip);
-      return { ...p, clips };
-    });
-  };
-
   if (trimmingClip) {
     const video = videoMap[trimmingClip.path];
     return (
@@ -83,9 +68,49 @@ export function Editor({ state, tag }: EditorProps) {
       <div className="preview-area">
         <div className="preview-placeholder">Preview</div>
       </div>
+      <div className="timeline">
+        {projectState.clips.length === 0 && (
+          <div className="timeline-placeholder">Timeline</div>
+        )}
+        {projectState.clips.map((clip, i) => {
+          const video = videoMap[clip.path];
+          return (
+            <ClipComponent
+              key={clip.id}
+              ends={[i > 0, i < projectState.clips.length - 1]}
+              clip={clip}
+              video={video}
+              onClick={() => setTrimmingClip(clip)}
+              onMove={(clipId, direction) => {
+                setProjectState((p) => {
+                  if (direction === "del") {
+                    return {
+                      ...p,
+                      clips: p.clips.filter((c) => c.id !== clip.id),
+                    };
+                  }
+
+                  const index = p.clips.findIndex((c) => c.id === clipId);
+                  if (index === -1) return p;
+
+                  const newIndex = direction === "left" ? index - 1 : index + 1;
+                  if (newIndex < 0 || newIndex >= p.clips.length) return p;
+
+                  return {
+                    ...p,
+                    clips: p.clips
+                      .with(index, p.clips[newIndex])
+                      .with(newIndex, p.clips[index]),
+                  };
+                });
+              }}
+            />
+          );
+        })}
+      </div>
       <div className="palette">
         {videos.map((video) => (
-          <div
+          <button
             key={video.path}
             className="palette-item"
             onClick={() => {
@@ -105,34 +130,22 @@ export function Editor({ state, tag }: EditorProps) {
                 }));
               }
             }}
+            disabled={!video.preview}
           >
             <img src={getThumbnailUrl(video).toString()} />
             {projectState.clips.some((c) => c.path === video.path) && (
               <div className="used-indicator">✔️</div>
             )}
             {!video.preview && <div className="unavail-indicator">⛔</div>}
-          </div>
+          </button>
         ))}
-        <button onClick={() => createPreviewList(tag).then(setState)}>
+        <button
+          onClick={() => createPreviewList(tag).then(setState)}
+          className="prepare-btn"
+          disabled={videos.every((video) => video.preview)}
+        >
           Prepare previews
         </button>
-      </div>
-      <div className="timeline">
-        {projectState.clips.length === 0 && (
-          <div className="timeline-placeholder">Timeline</div>
-        )}
-        {projectState.clips.map((clip) => {
-          const video = videoMap[clip.path];
-          return (
-            <ClipComponent
-              key={clip.id}
-              clip={clip}
-              video={video}
-              onClick={() => setTrimmingClip(clip)}
-              onMove={moveClip}
-            />
-          );
-        })}
       </div>
     </div>
   );

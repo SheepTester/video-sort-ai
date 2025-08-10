@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { State } from "./api";
-import { Editor } from "./components/Editor";
+import { State } from "../api";
+import { Editor } from "./Editor";
 
 export type EditAppProps = {
   state: State;
 };
-export function EditApp({ state }: EditAppProps) {
+export function TagSelect({ state }: EditAppProps) {
   const [tag, setTag] = useState<string | null>(null);
 
   const tags = useMemo(() => {

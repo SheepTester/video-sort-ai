@@ -59,10 +59,12 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                     .arg(&path)
                     .arg("-frames")
                     .arg("1")
+                    // fix width to 256, autocompute height
                     .arg("-vf")
                     .arg("scale=256:-1")
+                    // lowest quality
                     .arg("-q")
-                    .arg("20") // lowest quality
+                    .arg("20")
                     .arg(format!("{DIR_PATH}/thumbs/{thumbnail_name}"))
                     .output()
                     .await?;
@@ -92,9 +94,15 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
         })
         .collect::<Vec<_>>();
     for (path, handle) in handles {
-        if let Err(err) = handle.await {
-            eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
-        };
+        match handle.await {
+            Err(err) => {
+                eprintln!("Unexpected join error in {:?}: {err:?}.", path.file_name());
+            }
+            Ok(Err(err)) => {
+                eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
+            }
+            Ok(Ok(_)) => {}
+        }
     }
 
     // fix terminal from entering raw mode

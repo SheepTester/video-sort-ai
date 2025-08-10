@@ -4,7 +4,10 @@ import { VideoModal } from "./components/VideoModal";
 import { SetStateContext } from "./contexts/state";
 import { VideoContextProvider } from "./contexts/video";
 import { App } from "./App";
-import { EditApp } from "./EditApp";
+import { TagSelect } from "./components/TagSelect";
+import { Editor } from "./components/Editor";
+
+type AppMode = { type: "app" } | { type: "edit"; tag: string | null };
 
 export function Wrapper() {
   const [state, setState] = useState<State | null>(null);
@@ -25,11 +28,15 @@ export function Wrapper() {
     };
   }, []);
 
-  const [appMode, setAppMode] = useState<"app" | "edit">("app");
+  const [appMode, setAppMode] = useState<AppMode>({ type: "app" });
 
   useEffect(() => {
     const params = new URL(window.location.href).searchParams;
-    setAppMode(params.get("edit") !== null ? "edit" : "app");
+    setAppMode(
+      params.get("edit") !== null
+        ? { type: "edit", tag: params.get("tag") }
+        : { type: "app" }
+    );
   }, []);
 
   const [videoOpen, setVideoOpen] = useState(false);
@@ -46,7 +53,13 @@ export function Wrapper() {
   return (
     <SetStateContext.Provider value={setState}>
       <VideoContextProvider value={showVideo}>
-        {appMode === "app" ? <App state={state} /> : <EditApp state={state} />}
+        {appMode.type === "app" ? (
+          <App state={state} />
+        ) : appMode.tag === null ? (
+          <TagSelect state={state} />
+        ) : (
+          <Editor state={state} tag={appMode.tag} />
+        )}
         <VideoModal
           open={videoOpen}
           onClose={() => setVideoOpen(false)}

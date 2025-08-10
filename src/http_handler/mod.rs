@@ -155,12 +155,15 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     let handle = tokio::spawn(async move {
                         let _permit = semaphore.acquire_owned().await?;
                         let ffprobe_result = Command::new("ffprobe")
+                            // only print errors
                             .arg("-v")
-                            .arg("error") // only print errors
+                            .arg("error")
+                            // select one video stream
                             .arg("-select_streams")
-                            .arg("v:0") // select one video stream
+                            .arg("v:0")
+                            // only print these fields
                             .arg("-show_entries")
-                            .arg("stream=width,height") // only print width and height
+                            .arg("stream=width,height:format=duration")
                             .arg("-output_format")
                             .arg("json")
                             .arg(&video.path)
@@ -186,7 +189,15 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             // 480p; -2 means to keep the other dimension even,
                             // because videos like even resolutions
                             .arg("-vf")
-                            .arg("scale=if(gte(iw,ih),480,-2):if(gte(iw,ih),-2,480)")
+                            .arg(
+                                // fix the smaller dimension to 480
+                                if ffprobe_output.streams.0.width < ffprobe_output.streams.0.height
+                                {
+                                    "scale=480:-2"
+                                } else {
+                                    "scale=-2:480"
+                                },
+                            )
                             // 16kbps and 32kbps sound basically just as bad
                             .arg("-b:a")
                             .arg("16k")
@@ -222,18 +233,21 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             });
                         }
                         save_state(&*state.read().await).await?;
-                        eprintln!("DONE!!! {:?}", video.path.file_name());
                         Ok::<(), BoxedError>(())
                     });
                     (path_clone, handle)
                 })
                 .collect::<Vec<_>>();
             for (path, handle) in handles {
-                if let Err(err) = handle.await {
-                    eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
-                } else {
-                    eprintln!("success in {:?}", path.file_name());
-                };
+                match handle.await {
+                    Err(err) => {
+                        eprintln!("Unexpected join error in {:?}: {err:?}.", path.file_name());
+                    }
+                    Ok(Err(err)) => {
+                        eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
+                    }
+                    Ok(Ok(_)) => {}
+                }
             }
             eprintln!("Preview generation complete");
             build_json_response(&*state.read().await)
