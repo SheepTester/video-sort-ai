@@ -229,11 +229,13 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 })
                 .collect::<Vec<_>>();
             for (path, handle) in handles {
-                if let Err(err) = handle.await {
-                    eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
-                } else {
-                    eprintln!("success in {:?}", path.file_name());
-                };
+                match handle.await {
+                    Ok(Ok(_)) => eprintln!("success in {:?}", path.file_name()),
+                    Ok(Err(e)) => {
+                        eprintln!("task for {:?} returned an error: {e}", path.file_name())
+                    }
+                    Err(e) => eprintln!("task for {:?} panicked: {e}", path.file_name()),
+                }
             }
             eprintln!("Preview generation complete");
             build_json_response(&*state.read().await)
