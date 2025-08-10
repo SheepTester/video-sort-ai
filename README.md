@@ -5,6 +5,14 @@ Sort videos on Android. Written in blazing fast Rust 🦀⚡
 > [!IMPORTANT]
 > This project does not directly involve generative artificial intelligence.
 
+| List                                           | Feed                                                   | Grid                                      |
+| ---------------------------------------------- | ------------------------------------------------------ | ----------------------------------------- |
+| ![list view of videos](./docs/v0.7.1-list.png) | ![tiktok-style feed of videos](./docs/v0.7.1-feed.png) | ![grid of videos](./docs/v0.7.1-grid.png) |
+
+| Tags                                         | Edit                                      | Trim                                       |
+| -------------------------------------------- | ----------------------------------------- | ------------------------------------------ |
+| ![tag list](./docs/v0.8.6-edit-tag-list.png) | ![video editor](./docs/v0.8.6-editor.png) | ![clip trimmer](./docs/v0.8.6-trimmer.png) |
+
 ## Installation
 
 Run this in Termux to install the latest version:
