@@ -21,10 +21,6 @@ pub fn make_filter(
     command: &mut Command,
     output_path: &str,
 ) -> MyResult<()> {
-    // disable auto handling of rotated videos, just in case (I don't think it
-    // does)
-    // command.arg("-noautorotate");
-
     let clips = request
         .clips
         .iter()
@@ -65,25 +61,25 @@ pub fn make_filter(
             "[{clip_index}:v] trim = start={} : end={}, setpts=PTS-STARTPTS",
             clip.start, clip.end
         ));
-        // match clip.preview.original_rotation {
-        //     crate::common::Rotation::Unrotated => {}
-        //     crate::common::Rotation::Neg90 => filters.push_str(&format!(
-        //         ", transpose = dir=cclock : passthrough={}",
-        //         if my_aspect_ratio > 1.0 {
-        //             "landscape"
-        //         } else {
-        //             "portrait"
-        //         }
-        //     )),
-        //     crate::common::Rotation::Pos90 => filters.push_str(&format!(
-        //         ", transpose = dir=clock : passthrough={}",
-        //         if my_aspect_ratio > 1.0 {
-        //             "landscape"
-        //         } else {
-        //             "portrait"
-        //         }
-        //     )),
-        // }
+        match clip.preview.original_rotation {
+            crate::common::Rotation::Unrotated => {}
+            crate::common::Rotation::Neg90 => filters.push_str(&format!(
+                ", transpose = dir=clock : passthrough={}",
+                if my_aspect_ratio > 1.0 {
+                    "landscape"
+                } else {
+                    "portrait"
+                }
+            )),
+            crate::common::Rotation::Pos90 => filters.push_str(&format!(
+                ", transpose = dir=cclock : passthrough={}",
+                if my_aspect_ratio > 1.0 {
+                    "landscape"
+                } else {
+                    "portrait"
+                }
+            )),
+        }
         if need_bg {
             filters.push_str(&format!(
                 ", split [clip{i}v_trimmed] [clip{i}v_trimmed_copy]; "
@@ -160,6 +156,8 @@ pub fn make_filter(
     ));
     filters.push_str(&concat);
     for input in inputs {
+        // remove rotation metadata i think
+        command.arg("-display_rotation").arg("0");
         command.arg("-i").arg(input);
     }
     command.arg("-filter_complex").arg(filters);

@@ -306,7 +306,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
         (&Method::POST, "/cook") => {
             let request: CookReq =
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
-            let out_path = format!("./{}.mp4", request.name);
+            let out_path = format!("./storage/downloads/{}.mp4", request.name);
             let mut command = Command::new("ffmpeg");
             // only log errors and stats
             command.arg("-v").arg("error");

@@ -286,7 +286,9 @@ export function Editor({ state, tag }: EditorProps) {
               `video-sort-${tag}`
             )
               .then(() => {
-                alert(`Successfully saved to video-sort-${tag}.mp4 in Termux.`);
+                alert(
+                  `Successfully saved to video-sort-${tag}.mp4 in your Downloads folder.`
+                );
               })
               .finally(() => setLoading(false));
           }}

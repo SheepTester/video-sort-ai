@@ -16,6 +16,9 @@ chmod +x video-sort
 
 You also need `ffmpeg` on your `PATH`.
 
+> [!NOTE]
+> This project was made with ffmpeg 7.1.1.
+
 Then, run
 
 ```sh
