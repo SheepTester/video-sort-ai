@@ -167,11 +167,8 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             .output()
                             .await?;
                         if !ffprobe_result.status.success() {
-                            eprintln!(
-                                "ffprobe error in {:?}: {}.",
-                                video.path.file_name(),
-                                String::from_utf8_lossy(&ffprobe_result.stderr)
-                            );
+                            eprintln!("ffprobe error in {:?}", video.path.file_name(),);
+                            io::stderr().write_all(&ffprobe_result.stderr).await?;
                             Err("ffprobe error")?;
                         }
                         let ffprobe_output: FfprobeOutput =
@@ -225,6 +222,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             });
                         }
                         save_state(&*state.read().await).await?;
+                        eprintln!("DONE!!! {:?}", video.path.file_name());
                         Ok::<(), BoxedError>(())
                     });
                     (path_clone, handle)
@@ -233,6 +231,8 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             for (path, handle) in handles {
                 if let Err(err) = handle.await {
                     eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
+                } else {
+                    eprintln!("success in {:?}", path.file_name());
                 };
             }
             eprintln!("Preview generation complete");
