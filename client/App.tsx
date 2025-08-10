@@ -1,19 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { getList, State, Video } from "./api";
+import { useMemo, useState } from "react";
+import { State } from "./api";
 import { GridView } from "./components/GridView";
 import { ListView } from "./components/ListView";
 import { FeedView } from "./components/FeedView";
 import { Navbar } from "./components/Navbar";
-import { SetStateContext } from "./contexts/state";
-import { VideoContextProvider } from "./contexts/video";
-import { VideoModal } from "./components/VideoModal";
 import { Filter, Sort, ViewMode } from "./types";
 
-type AppInnerProps = {
+export type AppProps = {
   state: State;
 };
 
-function AppInner({ state }: AppInnerProps) {
+export function App({ state }: AppProps) {
   const [viewMode, setViewMode] = useState<ViewMode>({ mode: "grid" });
   const [filter, setFilter] = useState<Filter>({ mode: "none" });
   const [sort, setSort] = useState<Sort>({ by: "mtime", desc: true });
@@ -64,52 +61,5 @@ function AppInner({ state }: AppInnerProps) {
         ))}
       </datalist>
     </div>
-  );
-}
-
-export function App() {
-  const [state, setState] = useState<State | null>(null);
-  const [errors, setErrors] = useState<Error[]>([]);
-  useEffect(() => {
-    getList().then(setState);
-    const errorListener = (e: ErrorEvent) => {
-      setErrors((errors) => [...errors, e.error]);
-    };
-    const rejectionListener = (e: PromiseRejectionEvent) => {
-      setErrors((errors) => [...errors, e.reason]);
-    };
-    window.addEventListener("error", errorListener);
-    window.addEventListener("unhandledrejection", rejectionListener);
-    return () => {
-      window.removeEventListener("error", errorListener);
-      window.removeEventListener("unhandledrejection", rejectionListener);
-    };
-  }, []);
-
-  const [videoOpen, setVideoOpen] = useState(false);
-  const [videoPath, setVideoPath] = useState("");
-  const showVideo = useCallback((video: Video) => {
-    setVideoOpen(true);
-    setVideoPath(video.path);
-  }, []);
-
-  if (!state) {
-    return null;
-  }
-
-  return (
-    <SetStateContext.Provider value={setState}>
-      <VideoContextProvider value={showVideo}>
-        <AppInner state={state} />
-        <VideoModal
-          open={videoOpen}
-          onClose={() => setVideoOpen(false)}
-          video={state.videos.find((video) => video.path === videoPath) ?? null}
-        />
-        {errors.length > 0 && (
-          <pre>{errors.map((error) => error.stack).join("\n\n")}</pre>
-        )}
-      </VideoContextProvider>
-    </SetStateContext.Provider>
   );
 }

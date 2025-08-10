@@ -29,7 +29,9 @@ async fn start_server(state: SharedState) -> MyResult<()> {
     const PORT: u16 = 8008;
     let addr = SocketAddr::from(([0, 0, 0, 0], PORT));
     let listener = TcpListener::bind(addr).await?;
-    eprintln!("{}", link(&format!("http://localhost:{PORT}")));
+    eprintln!();
+    eprintln!("Sort: {}", link(&format!("http://localhost:{PORT}/")));
+    eprintln!("Edit: {}", link(&format!("http://localhost:{PORT}/?edit")));
 
     loop {
         let state_clone = state.clone();
