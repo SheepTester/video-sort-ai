@@ -38,7 +38,6 @@ function Trimmer_({
       dialogRef.current?.close();
       if (videoRef.current) {
         videoRef.current.pause();
-        videoRef.current.ontimeupdate = null;
       }
     }
   }, [open]);
@@ -65,15 +64,19 @@ function Trimmer_({
       videoEl.currentTime = Math.max(clip.start, clip.end - 0.5);
       videoEl.play();
     }
-    // Stop playback at the end time
+  };
+
+  useEffect(() => {
     const stopPlayback = () => {
-      if (videoEl.currentTime >= clip.end) {
-        videoEl.pause();
-        videoEl.ontimeupdate = null;
+      if (videoRef.current && videoRef.current.currentTime >= clip.end) {
+        videoRef.current.pause();
       }
     };
-    videoEl.ontimeupdate = stopPlayback;
-  };
+    videoRef.current?.addEventListener("timeupdate", stopPlayback);
+    return () => {
+      videoRef.current?.removeEventListener("timeupdate", stopPlayback);
+    };
+  }, [clip.end]);
 
   return (
     <dialog

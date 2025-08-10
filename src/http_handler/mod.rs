@@ -18,6 +18,7 @@ use tokio_util::io::ReaderStream;
 
 use crate::{
     common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, Preview, SharedState, save_state},
+    fmt::faded,
     http_handler::{
         defs::{
             CookReq, DeleteRequest, JsonError, PreparePreviewReq, RenameTagRequest,
@@ -144,9 +145,12 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 })
                 .collect::<Vec<_>>();
             eprintln!(
-                "Generating {} preview videos for tag {}",
-                videos.len(),
-                request.tag,
+                "{}",
+                faded(&format!(
+                    "[preview] Generating {} preview videos for tag {}...",
+                    videos.len(),
+                    request.tag,
+                ))
             );
             let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FFMPEG));
             let handles = videos
@@ -173,7 +177,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             .output()
                             .await?;
                         if !ffprobe_result.status.success() {
-                            eprintln!("ffprobe error in {:?}", video.path.file_name(),);
+                            eprintln!("[preview] ffprobe error in {:?}", video.path.file_name());
                             io::stderr().write_all(&ffprobe_result.stderr).await?;
                             Err("ffprobe error")?;
                         }
@@ -213,7 +217,10 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             .output()
                             .await?;
                         if !ffmpeg_result.status.success() {
-                            eprintln!("Failed to create preview for {:?}.", video.path.file_name());
+                            eprintln!(
+                                "[preview] Failed to create preview for {:?}.",
+                                video.path.file_name()
+                            );
                             io::stderr().write_all(&ffmpeg_result.stderr).await?;
                             Err("ffmpeg preview error")?;
                         }
@@ -247,15 +254,21 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             for (path, handle) in handles {
                 match handle.await {
                     Err(err) => {
-                        eprintln!("Unexpected join error in {:?}: {err:?}.", path.file_name());
+                        eprintln!(
+                            "[preview] Unexpected join error in {:?}: {err:?}.",
+                            path.file_name()
+                        );
                     }
                     Ok(Err(err)) => {
-                        eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
+                        eprintln!(
+                            "[preview] Unexpected error in {:?}: {err:?}.",
+                            path.file_name()
+                        );
                     }
                     Ok(Ok(_)) => {}
                 }
             }
-            eprintln!("Preview generation complete");
+            eprintln!("[preview] Preview generation complete");
             build_json_response(&*state.read().await)
         }
         (&Method::POST, "/cook") => {
@@ -271,7 +284,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 make_filter(&state, &request, &mut command, &out_path)?;
             }
 
-            eprintln!("[cook] Cooking...");
+            eprintln!("{}", faded("[cook] Cooking..."));
             let ffmpeg_result = command.status().await?;
             if !ffmpeg_result.success() {
                 eprintln!("[cook] ffmpeg failure");

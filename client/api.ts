@@ -121,9 +121,9 @@ export const cook = (clips: CookClip[], size: Size, name: string) =>
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ clips, ...size, name }),
-  }).then(
-    async (r): Promise<State> =>
-      r.ok
-        ? r.json()
-        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
-  );
+  }).then(async (r): Promise<void> => {
+    if (!r.ok)
+      return Promise.reject(
+        new Error(`HTTP ${r.status} error: ${await r.text()}`)
+      );
+  });
