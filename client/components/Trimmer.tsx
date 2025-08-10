@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { getPreviewUrl, Video } from "../api";
+import { memo, useEffect, useRef } from "react";
+import { Video } from "../api";
 import { Clip } from "../types";
 import { RangeSlider } from "./RangeSlider";
 import { formatSeconds } from "../util";
@@ -15,7 +15,7 @@ type TrimmerProps = {
   onClose: () => void;
 };
 
-export function Trimmer({
+function Trimmer_({
   clip,
   video,
   duration,
@@ -24,6 +24,7 @@ export function Trimmer({
   open,
   onClose,
 }: TrimmerProps) {
+  console.log("trimmer render");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -147,3 +148,5 @@ export function Trimmer({
     </dialog>
   );
 }
+
+export const Trimmer = memo(Trimmer_);

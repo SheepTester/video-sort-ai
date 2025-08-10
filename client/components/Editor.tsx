@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { createPreviewList, State } from "../api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPreviewList, getPreviewUrl, State } from "../api";
 import { getThumbnailUrl } from "../api";
 import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
@@ -19,6 +19,9 @@ export function Editor({ state, tag }: EditorProps) {
   const [lastTrimmingClip, setLastTrimmingClip] = useState<string | null>(null);
   const setState = useSetState();
   const [loading, setLoading] = useState(false);
+  const [time, setTime] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const videoRefs = useRef<Record<string, HTMLVideoElement>>({});
 
   useEffect(() => {
     const project = localStorage.getItem(`video-sort/project/${tag}`);
@@ -46,34 +49,88 @@ export function Editor({ state, tag }: EditorProps) {
 
   const currentClip = trimmingClip ?? lastTrimmingClip;
   const clip =
-    currentClip && projectState.clips.find((clip) => clip.id === currentClip);
+    currentClip !== null &&
+    projectState.clips.find((clip) => clip.id === currentClip);
   let trimmerModal;
+  const otherClips = useMemo(
+    () =>
+      projectState.clips.filter(
+        (c) => clip && c.path === clip.path && c.id !== clip.id
+      ),
+    [projectState, clip]
+  );
+  const handleUpdate = useCallback((newClip: Clip) => {
+    setProjectState((p) => ({
+      ...p,
+      clips: p.clips.map((c) => (c.id === newClip.id ? newClip : c)),
+    }));
+  }, []);
+  const handleClose = useCallback(() => setTrimmingClip(null), []);
   if (clip && videoMap[clip.path].preview) {
     trimmerModal = (
       <Trimmer
         clip={clip}
         video={videoMap[clip.path]}
         duration={videoMap[clip.path].preview?.original_duration ?? 0}
-        otherClips={projectState.clips.filter(
-          (c) => c.path === clip.path && c.id !== clip.id
-        )}
-        onUpdate={(newClip) => {
-          setProjectState((p) => ({
-            ...p,
-            clips: p.clips.map((c) => (c.id === newClip.id ? newClip : c)),
-          }));
-        }}
+        otherClips={otherClips}
+        onUpdate={handleUpdate}
         open={trimmingClip !== null}
-        onClose={() => setTrimmingClip(null)}
+        onClose={handleClose}
       />
     );
+  }
+
+  let t = 0;
+  let viewingClip: { offset: number; clip: Clip } | null = null;
+  for (const clip of projectState.clips) {
+    const duration = clip.end - clip.start;
+    if (time - t < duration) {
+      viewingClip = { offset: t, clip };
+      break;
+    }
+    t += duration;
   }
 
   return (
     <div className="editor-container">
       {trimmerModal}
       <div className="preview-area">
-        <div className="preview-placeholder">Preview</div>
+        <div className="preview-placeholder">
+          {videos.map((video) => (
+            <video
+              preload="none"
+              src={getPreviewUrl(video).toString()}
+              poster={getThumbnailUrl(video).toString()}
+              key={video.path}
+              ref={(elem) => {
+                if (elem) videoRefs.current[video.path] = elem;
+              }}
+              style={{
+                visibility:
+                  viewingClip?.clip.path === video.path ? "visible" : "hidden",
+              }}
+            />
+          ))}
+        </div>
+        <div className="vidcontrols">
+          <button onClick={() => setPlaying((p) => !p)}>
+            {playing ? "⏸️" : "▶️"}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={projectState.clips.reduce(
+              (cum, curr) => cum + curr.end - curr.start,
+              0
+            )}
+            value={time}
+            onChange={(e) => {
+              setTime(e.currentTarget.valueAsNumber);
+              setPlaying(false);
+            }}
+            step="any"
+          />
+        </div>
       </div>
       <div className="timeline">
         {projectState.clips.map((clip, i) => {
@@ -155,7 +212,7 @@ export function Editor({ state, tag }: EditorProps) {
               .finally(() => setLoading(false));
           }}
           className="prepare-btn"
-          disabled={videos.every((video) => video.preview)}
+          disabled={videos.every((video) => video.preview) || loading}
         >
           Prepare previews
         </button>
