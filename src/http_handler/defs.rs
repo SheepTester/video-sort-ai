@@ -27,3 +27,17 @@ pub struct JsonError {
 pub struct PreparePreviewReq {
     pub tag: String,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Clip {
+    pub start: f64,
+    pub end: f64,
+    pub thumbnail_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CookReq {
+    pub clips: Vec<Clip>,
+    /// thumbnail of video to use size of
+    pub sizing: Option<String>,
+}

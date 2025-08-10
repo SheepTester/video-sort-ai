@@ -24,7 +24,6 @@ function Trimmer_({
   open,
   onClose,
 }: TrimmerProps) {
-  console.log("trimmer render");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 

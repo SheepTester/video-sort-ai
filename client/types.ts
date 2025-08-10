@@ -9,8 +9,8 @@ export type Sort = { by: "mtime" | "size"; desc: boolean };
 
 export type Clip = {
   id: string;
-  /** references `path` in `state.videos` */
-  path: string;
+  /** references `thumbnail` in `state.videos` */
+  thumb: string;
   // in seconds
   start: number;
   end: number;

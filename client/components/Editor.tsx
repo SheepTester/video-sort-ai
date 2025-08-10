@@ -43,7 +43,10 @@ export function Editor({ state, tag }: EditorProps) {
   );
 
   const videoMap = useMemo(
-    () => Object.fromEntries(state.videos.map((video) => [video.path, video])),
+    () =>
+      Object.fromEntries(
+        state.videos.map((video) => [video.thumbnail_name, video])
+      ),
     [state.videos]
   );
 
@@ -55,7 +58,7 @@ export function Editor({ state, tag }: EditorProps) {
   const otherClips = useMemo(
     () =>
       projectState.clips.filter(
-        (c) => clip && c.path === clip.path && c.id !== clip.id
+        (c) => clip && c.thumb === clip.thumb && c.id !== clip.id
       ),
     [projectState, clip]
   );
@@ -66,12 +69,12 @@ export function Editor({ state, tag }: EditorProps) {
     }));
   }, []);
   const handleClose = useCallback(() => setTrimmingClip(null), []);
-  if (clip && videoMap[clip.path].preview) {
+  if (clip && videoMap[clip.thumb].preview) {
     trimmerModal = (
       <Trimmer
         clip={clip}
-        video={videoMap[clip.path]}
-        duration={videoMap[clip.path].preview?.original_duration ?? 0}
+        video={videoMap[clip.thumb]}
+        duration={videoMap[clip.thumb].preview?.original_duration ?? 0}
         otherClips={otherClips}
         onUpdate={handleUpdate}
         open={trimmingClip !== null}
@@ -101,13 +104,15 @@ export function Editor({ state, tag }: EditorProps) {
               preload="none"
               src={getPreviewUrl(video).toString()}
               poster={getThumbnailUrl(video).toString()}
-              key={video.path}
+              key={video.thumbnail_name}
               ref={(elem) => {
-                if (elem) videoRefs.current[video.path] = elem;
+                if (elem) videoRefs.current[video.thumbnail_name] = elem;
               }}
               style={{
                 visibility:
-                  viewingClip?.clip.path === video.path ? "visible" : "hidden",
+                  viewingClip?.clip.thumb === video.thumbnail_name
+                    ? "visible"
+                    : "hidden",
               }}
             />
           ))}
@@ -134,7 +139,7 @@ export function Editor({ state, tag }: EditorProps) {
       </div>
       <div className="timeline">
         {projectState.clips.map((clip, i) => {
-          const video = videoMap[clip.path];
+          const video = videoMap[clip.thumb];
           return (
             <ClipComponent
               key={clip.id}
@@ -176,7 +181,7 @@ export function Editor({ state, tag }: EditorProps) {
       <div className="palette">
         {videos.map((video) => (
           <button
-            key={video.path}
+            key={video.thumbnail_name}
             className="palette-item"
             onClick={() => {
               if (video.preview) {
@@ -187,7 +192,7 @@ export function Editor({ state, tag }: EditorProps) {
                     ...p.clips,
                     {
                       id: crypto.randomUUID(),
-                      path: video.path,
+                      thumb: video.thumbnail_name,
                       start: 0,
                       end: duration,
                     },
@@ -198,9 +203,9 @@ export function Editor({ state, tag }: EditorProps) {
             disabled={!video.preview}
           >
             <img src={getThumbnailUrl(video).toString()} />
-            {projectState.clips.some((c) => c.path === video.path) && (
-              <div className="used-indicator">✅</div>
-            )}
+            {projectState.clips.some(
+              (c) => c.thumb === video.thumbnail_name
+            ) && <div className="used-indicator">✅</div>}
             {!video.preview && <div className="unavail-indicator">⛔</div>}
           </button>
         ))}
