@@ -402,7 +402,7 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
-.palette-item video {
+.palette-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -437,36 +437,34 @@ button:not(:disabled) {
 .clip-item {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 4px;
-  background-color: #333;
-  padding: 4px;
-  border-radius: 4px;
-  cursor: pointer;
   width: 120px;
   flex-shrink: 0;
+}
+
+.clip-thumbnail-wrapper {
+  position: relative;
+  cursor: pointer;
 }
 
 .clip-thumbnail {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: 2px;
+  border-radius: 4px;
+  display: block;
 }
 
-.clip-info {
-  font-size: 12px;
-  width: 100%;
-}
-
-.clip-time {
+.clip-actions {
   display: flex;
   justify-content: space-between;
 }
 
-.clip-duration {
-  text-align: center;
-  color: #aaa;
+.clip-actions button {
+  flex-grow: 1;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 4px;
 }
 
 .trimmer-container {

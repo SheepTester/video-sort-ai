@@ -1,45 +1,25 @@
 import { getThumbnailUrl, Video } from "../api";
-import { ProjectState } from "./Editor";
+import { Clip } from "../types";
 
 type ClipProps = {
-  clip: ProjectState["clips"][0];
+  clip: Clip;
   video: Video;
   onClick: () => void;
-  onDragStart: () => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragEnd: () => void;
-  onDrop: () => void;
+  onMove: (clipId: string, direction: "left" | "right") => void;
 };
 
-export function Clip({
-  clip,
-  video,
-  onClick,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
-}: ClipProps) {
-  const duration = clip.end - clip.start;
+export function Clip({ clip, video, onClick, onMove }: ClipProps) {
   return (
-    <div
-      className="clip-item"
-      onClick={onClick}
-      draggable={true}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragEnd={onDragEnd}
-      onDrop={onDrop}
-    >
-      <img
-        className="clip-thumbnail"
-        src={getThumbnailUrl(video).toString()}
-      />
-      <div className="clip-info">
-        <div className="clip-time">
-          {clip.start.toFixed(2)}s - {clip.end.toFixed(2)}s
-        </div>
-        <div className="clip-duration">{duration.toFixed(2)}s</div>
+    <div className="clip-item">
+      <div className="clip-thumbnail-wrapper" onClick={onClick}>
+        <img
+          className="clip-thumbnail"
+          src={getThumbnailUrl(video).toString()}
+        />
+      </div>
+      <div className="clip-actions">
+        <button onClick={() => onMove(clip.id, "left")}>&lt;</button>
+        <button onClick={() => onMove(clip.id, "right")}>&gt;</button>
       </div>
     </div>
   );

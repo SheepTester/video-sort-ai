@@ -1,48 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 import { getPreviewUrl, Video } from "../api";
-import { ProjectState } from "./Editor";
+import { Clip } from "../types";
 import { RangeSlider } from "./RangeSlider";
-
-type Clip = ProjectState["clips"][0];
+import { formatSeconds } from "../util";
 
 type TrimmerProps = {
   clip: Clip;
   video: Video;
-  duration: number; // original video duration
   otherClips: Clip[];
   onUpdate: (newClip: Clip) => void;
   onClose: () => void;
 };
 
-// A simple formatter for seconds
-const formatTime = (time: number) => time.toFixed(2);
-
 export function Trimmer({
   clip,
   video,
-  duration,
   otherClips,
   onUpdate,
   onClose,
 }: TrimmerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [localClip, setLocalClip] = useState(clip);
-
-  useEffect(() => {
-    // Propagate changes up after a short delay to avoid spamming updates
-    const handler = setTimeout(() => onUpdate(localClip), 200);
-    return () => clearTimeout(handler);
-  }, [localClip, onUpdate]);
 
   const changeTime = (field: "start" | "end", delta: number) => {
-    setLocalClip((c) => {
-      const newValue = c[field] + delta;
-      // Basic validation
-      if (field === "start" && newValue >= c.end) return c;
-      if (field === "end" && newValue <= c.start) return c;
-      if (newValue < 0 || newValue > duration) return c;
-      return { ...c, [field]: newValue };
-    });
+    const newValue = clip[field] + delta;
+    // Basic validation
+    if (field === "start" && newValue >= clip.end) return;
+    if (field === "end" && newValue <= clip.start) return;
+    if (newValue < 0 || newValue > video.original_duration) return;
+
+    onUpdate({ ...clip, [field]: newValue });
   };
 
   const preview = (type: "start" | "end") => {
@@ -50,14 +36,14 @@ export function Trimmer({
     if (!videoEl) return;
 
     if (type === "start") {
-      videoEl.currentTime = localClip.start;
+      videoEl.currentTime = clip.start;
       videoEl.play();
     } else {
-      videoEl.currentTime = Math.max(localClip.start, localClip.end - 0.5);
+      videoEl.currentTime = Math.max(clip.start, clip.end - 0.5);
       videoEl.play();
       // Stop playback at the end time
       const stopPlayback = () => {
-        if (videoEl.currentTime >= localClip.end) {
+        if (videoEl.currentTime >= clip.end) {
           videoEl.pause();
           videoEl.removeEventListener("timeupdate", stopPlayback);
         }
@@ -80,29 +66,27 @@ export function Trimmer({
       />
       <div className="trimmer-controls">
         <div className="trimmer-info">
-          <div>Start: {formatTime(localClip.start)}s</div>
-          <div>End: {formatTime(localClip.end)}s</div>
-          <div>Duration: {formatTime(localClip.end - localClip.start)}s</div>
+          <div>Start: {formatSeconds(clip.start)}</div>
+          <div>End: {formatSeconds(clip.end)}</div>
+          <div>Duration: {formatSeconds(clip.end - clip.start)}</div>
         </div>
 
         <div className="range-slider-container">
           <RangeSlider
             min={0}
-            max={duration}
-            start={localClip.start}
-            end={localClip.end}
-            onStartChange={(newStart) =>
-              setLocalClip((c) => ({ ...c, start: newStart }))
-            }
-            onEndChange={(newEnd) =>
-              setLocalClip((c) => ({ ...c, end: newEnd }))
-            }
+            max={video.original_duration}
+            start={clip.start}
+            end={clip.end}
+            onStartChange={(newStart) => onUpdate({ ...clip, start: newStart })}
+            onEndChange={(newEnd) => onUpdate({ ...clip, end: newEnd })}
           />
           <div className="other-clips-ranges">
             {otherClips.map((otherClip, i) => {
-              const startPercent = (otherClip.start / duration) * 100;
+              const startPercent =
+                (otherClip.start / video.original_duration) * 100;
               const widthPercent =
-                ((otherClip.end - otherClip.start) / duration) * 100;
+                ((otherClip.end - otherClip.start) / video.original_duration) *
+                100;
               return (
                 <div
                   key={i}
@@ -134,7 +118,7 @@ export function Trimmer({
           </div>
         </div>
         <div className="trimmer-info">
-          Original Duration: {formatTime(duration)}s
+          Original Duration: {formatSeconds(video.original_duration)}
         </div>
       </div>
     </div>

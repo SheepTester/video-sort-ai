@@ -1,19 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { State, Video } from "../api";
-import { getThumbnailUrl, getVideoUrl } from "../api";
-import { Clip } from "./Clip";
+import { getThumbnailUrl } from "../api";
+import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
-
-export type ProjectState = {
-  clips: {
-    /** references `path` in `state.videos` */
-    path: string;
-    // in seconds
-    start: number;
-    end: number;
-  }[];
-  uninitialized?: boolean;
-};
+import { ProjectState, Clip } from "../types";
 
 export type EditorProps = {
   state: State;
@@ -24,12 +14,7 @@ export function Editor({ state, tag }: EditorProps) {
     clips: [],
     uninitialized: true,
   });
-  const [trimmingClip, setTrimmingClip] = useState<number | null>(null);
-  const [durations, setDurations] = useState<Record<string, number>>({});
-
-  // For drag and drop
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
+  const [trimmingClip, setTrimmingClip] = useState<Clip | null>(null);
 
   useEffect(() => {
     const project = localStorage.getItem(`video-sort/project/${tag}`);
@@ -50,74 +35,56 @@ export function Editor({ state, tag }: EditorProps) {
     [state, tag]
   );
 
-  const videoMap = useMemo(
-    () => new Map(state.videos.map((v) => [v.path, v])),
+  const videoMap: Record<string, Video> = useMemo(
+    () =>
+      Object.fromEntries(state.videos.map((video) => [video.path, video])),
     [state.videos]
   );
 
   const addClip = (video: Video) => {
-    const duration = durations[video.path];
-    if (duration === undefined) return;
-
     setProjectState((p) => ({
       ...p,
-      clips: [...p.clips, { path: video.path, start: 0, end: duration }],
+      clips: [
+        ...p.clips,
+        {
+          id: crypto.randomUUID(),
+          path: video.path,
+          start: 0,
+          end: video.original_duration,
+        },
+      ],
     }));
   };
 
-  const handleDragStart = (index: number) => {
-    dragItem.current = index;
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    dragOverItem.current = index;
-  };
-
-  const handleDrop = () => {
-    if (dragItem.current === null || dragOverItem.current === null) return;
-
+  const moveClip = (clipId: string, direction: "left" | "right") => {
     setProjectState((p) => {
-      const newClips = [...p.clips];
-      const draggedItemContent = newClips.splice(dragItem.current!, 1)[0];
-      newClips.splice(dragOverItem.current!, 0, draggedItemContent);
-      return { ...p, clips: newClips };
-    });
+      const clips = [...p.clips];
+      const index = clips.findIndex((c) => c.id === clipId);
+      if (index === -1) return p;
 
-    dragItem.current = null;
-    dragOverItem.current = null;
+      const newIndex = direction === "left" ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= clips.length) return p;
+
+      const [movedClip] = clips.splice(index, 1);
+      clips.splice(newIndex, 0, movedClip);
+      return { ...p, clips };
+    });
   };
 
-  if (trimmingClip !== null) {
-    const clip = projectState.clips[trimmingClip];
-    if (!clip) {
-      setTrimmingClip(null);
-      return null;
-    }
-    const video = videoMap.get(clip.path);
-    const duration = durations[clip.path];
-
-    if (!video || duration === undefined) {
-      setTrimmingClip(null);
-      return null;
-    }
-
-    const otherClips = projectState.clips.filter(
-      (c, index) => c.path === clip.path && index !== trimmingClip
-    );
-
+  if (trimmingClip) {
+    const video = videoMap[trimmingClip.path];
     return (
       <Trimmer
-        clip={clip}
+        clip={trimmingClip}
         video={video}
-        duration={duration}
-        otherClips={otherClips}
+        otherClips={projectState.clips.filter(
+          (c) => c.path === trimmingClip.path && c.id !== trimmingClip.id
+        )}
         onUpdate={(newClip) => {
-          setProjectState((p) => {
-            const newClips = [...p.clips];
-            newClips[trimmingClip] = newClip;
-            return { ...p, clips: newClips };
-          });
+          setProjectState((p) => ({
+            ...p,
+            clips: p.clips.map((c) => (c.id === newClip.id ? newClip : c)),
+          }));
         }}
         onClose={() => setTrimmingClip(null)}
       />
@@ -136,41 +103,26 @@ export function Editor({ state, tag }: EditorProps) {
             className="palette-item"
             onClick={() => addClip(video)}
           >
-            <video
-              src={getVideoUrl(video).toString()}
-              poster={getThumbnailUrl(video).toString()}
-              preload="metadata"
-              muted
-              onLoadedMetadata={(e) => {
-                setDurations((d) => ({
-                  ...d,
-                  [video.path]: e.currentTarget.duration,
-                }));
-              }}
-            />
+            <img src={getThumbnailUrl(video).toString()} />
             {projectState.clips.some((c) => c.path === video.path) && (
               <div className="used-indicator" />
             )}
           </div>
         ))}
       </div>
-      <div className="timeline" onDrop={handleDrop}>
+      <div className="timeline">
         {projectState.clips.length === 0 && (
           <div className="timeline-placeholder">Timeline</div>
         )}
-        {projectState.clips.map((clip, index) => {
-          const video = videoMap.get(clip.path);
-          if (!video) return null;
+        {projectState.clips.map((clip) => {
+          const video = videoMap[clip.path];
           return (
-            <Clip
-              key={index} // Not ideal, but fine for this scope. A unique ID per clip would be better.
+            <ClipComponent
+              key={clip.id}
               clip={clip}
               video={video}
-              onClick={() => setTrimmingClip(index)}
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDrop}
-              onDrop={handleDrop}
+              onClick={() => setTrimmingClip(clip)}
+              onMove={moveClip}
             />
           );
         })}

@@ -22,3 +22,14 @@ export function formatSize(bytes: number): string {
   const tb = gb / k;
   return `${tb.toFixed(1)} TB`;
 }
+
+export function formatSeconds(seconds: number): string {
+  const formatter = new Intl.NumberFormat(undefined, {
+    style: "unit",
+    unit: "second",
+    unitDisplay: "narrow",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return formatter.format(seconds);
+}
