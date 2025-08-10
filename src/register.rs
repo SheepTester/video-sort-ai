@@ -8,12 +8,10 @@ use tokio::{
 };
 
 use crate::{
-    common::{DIR_PATH, SharedState, StowState, Video, save_state},
+    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, SharedState, StowState, Video, save_state},
     fmt::faded,
     util::{BoxedError, MyResult, format_size},
 };
-
-const MAX_CONCURRENT_FFMPEG: usize = 10;
 
 pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
     let mut entries = fs::read_dir(path).await?;
@@ -58,7 +56,7 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
                 );
                 let ffmpeg_result = Command::new("ffmpeg")
                     .arg("-i")
-                    .arg(path.clone())
+                    .arg(&path)
                     .arg("-frames")
                     .arg("1")
                     .arg("-vf")

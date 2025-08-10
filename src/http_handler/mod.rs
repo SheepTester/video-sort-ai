@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
+use std::{ffi::OsStr, os::unix::ffi::OsStrExt, sync::Arc};
 
 use futures_util::TryStreamExt;
 use http_body_util::{BodyExt, Full, StreamBody};
@@ -6,18 +6,25 @@ use hyper::{
     Method, Request, Response, StatusCode,
     body::{Buf, Bytes, Frame},
 };
-use tokio::fs::{self, File};
+use tokio::{
+    fs::{self, File},
+    process::Command,
+    sync::Semaphore,
+};
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    common::{DIR_PATH, SharedState, save_state},
+    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, Preview, SharedState, save_state},
     http_handler::{
-        defs::{DeleteRequest, JsonError, RenameTagRequest, VideoMetadataEditReq},
+        defs::{
+            DeleteRequest, JsonError, PreparePreviewReq, RenameTagRequest, VideoMetadataEditReq,
+        },
         util::{
             CORS, MyResponse, build_html_response, build_json_response, build_text_response,
             escape_html,
         },
     },
+    util::BoxedError,
 };
 
 mod defs;
@@ -95,6 +102,81 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 }
             }
             save_state(&*state.read().await).await?;
+            build_json_response(&*state.read().await)
+        }
+        (&Method::POST, "/preview") => {
+            let request: PreparePreviewReq =
+                serde_json::from_reader(req.collect().await?.aggregate().reader())?;
+            let videos = state
+                .read()
+                .await
+                .videos
+                .iter()
+                .filter_map(|video| {
+                    if video.tags.contains(&request.tag) && video.preview.is_none() {
+                        Some(video.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FFMPEG));
+            let handles = videos
+                .into_iter()
+                .map(|video| {
+                    let path_clone = video.path.clone();
+                    let state = state.clone();
+                    let semaphore = semaphore.clone();
+                    let handle = tokio::spawn(async move {
+                        let _permit = semaphore.acquire_owned().await?;
+                        let ffprobe_result = Command::new("ffprobe")
+                            .arg("-v")
+                            .arg("error") // only print errors
+                            .arg("-select_streams")
+                            .arg("v:0") // select one video stream
+                            .arg("-show_entries")
+                            .arg("stream=width,height") // only print width and height
+                            .arg("-of")
+                            .arg("csv=s=x:p=0") // output format: CSV with separator x
+                            .arg(&video.path)
+                            .output()
+                            .await?;
+                        if !ffprobe_result.status.success() {
+                            eprintln!(
+                                "ffprobe error in {:?}: {}.",
+                                video.path.file_name(),
+                                String::from_utf8_lossy(&ffprobe_result.stderr)
+                            );
+                            return Ok::<(), BoxedError>(());
+                        }
+                        let ffprobe_output = String::from_utf8_lossy(&ffprobe_result.stdout);
+                        let (width, height) = ffprobe_output
+                            .split_once('x')
+                            .ok_or("no x in ffprobe output")?;
+                        {
+                            let mut state = state.write().await;
+                            state
+                                .videos
+                                .iter_mut()
+                                .find(|v| v.path == video.path)
+                                .ok_or("cant find video i was making preview for")?
+                                .preview = Some(Preview {
+                                size: 0,
+                                original_width: width.parse()?,
+                                original_height: height.parse()?,
+                            });
+                        }
+                        save_state(&*state.read().await).await?;
+                        Ok::<(), BoxedError>(())
+                    });
+                    (path_clone, handle)
+                })
+                .collect::<Vec<_>>();
+            for (path, handle) in handles {
+                if let Err(err) = handle.await {
+                    eprintln!("Unexpected error in {:?}: {err:?}.", path.file_name());
+                };
+            }
             build_json_response(&*state.read().await)
         }
         (&Method::OPTIONS, _) => Ok(Response::builder()

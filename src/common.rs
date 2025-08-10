@@ -6,10 +6,11 @@ use tokio::{fs, sync::RwLock};
 use crate::util::MyResult;
 
 pub const DIR_PATH: &str = "./.video-sort";
+pub const MAX_CONCURRENT_FFMPEG: usize = 10;
 
 pub type SharedState = Arc<RwLock<State>>;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Video {
     pub path: PathBuf,
     pub thumbnail_name: String,
@@ -23,19 +24,19 @@ pub struct Video {
     pub stow_state: StowState,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum StowState {
     Original,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Preview {
-    size: u64,
-    original_width: u32,
-    original_height: u32,
+    pub size: u64,
+    pub original_width: u32,
+    pub original_height: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
     pub videos: Vec<Video>,
 }

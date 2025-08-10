@@ -22,3 +22,8 @@ pub enum DeleteRequest {
 pub struct JsonError {
     pub error: String,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PreparePreviewReq {
+    pub tag: String,
+}
