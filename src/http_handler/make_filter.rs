@@ -166,6 +166,8 @@ pub fn make_filter(
     // specify what the outputs are
     command.arg("-map").arg("[outv]");
     command.arg("-map").arg("[outa]");
+    // set rotation to 0 (termux ffmpeg seems to copy it)
+    command.arg("-metadata:s:v").arg("rotate=0");
     // should be fine if we overwrite whatever's there. just in case, so it
     // doesn't get blocked by the yes thing
     command.arg("-y");
