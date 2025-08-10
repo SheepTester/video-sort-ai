@@ -172,11 +172,11 @@ function Trimmer_({
                 val === "Pos90" ||
                 val === "Neg180"
               ) {
-                if (
-                  video.preview2 &&
-                  val !== video.preview2.original_rotation
-                ) {
-                  onUpdate({ ...clip, overrideRotation: val });
+                if (video.preview2) {
+                  onUpdate({
+                    ...clip,
+                    overrideRotation: val !== origRot ? val : undefined,
+                  });
                 }
               }
             }}
