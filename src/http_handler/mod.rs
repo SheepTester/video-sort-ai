@@ -199,10 +199,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         let ffmpeg_result = Command::new("ffmpeg")
                             .arg("-i")
                             .arg(video.current_loc())
-                            // fairly low quality
-                            .arg("-crf")
-                            .arg("32")
-                            // 480p; -2 means to keep the other dimension even,
+                            // 144p; -2 means to keep the other dimension even,
                             // because videos like even resolutions
                             .arg("-vf")
                             .arg(
@@ -214,11 +211,15 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                     "scale=-2:144"
                                 },
                             )
-                            // there is a noticeable improvement from 32k to
-                            // 64k. 16k/32k has a nice aesthetic but voices are
-                            // not intelligible
+                            // i'd rather it be fast than small
+                            .arg("-preset")
+                            .arg("ultrafast")
+                            // fairly low quality
+                            .arg("-crf")
+                            .arg("32")
+                            // 16k and 32k sound fairly similar
                             .arg("-b:a")
-                            .arg("64k")
+                            .arg("16k")
                             // make video seekable
                             .arg("-movflags")
                             .arg("+faststart")

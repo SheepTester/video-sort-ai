@@ -502,7 +502,7 @@ button:not(:disabled) {
 }
 
 .clip-thumbnail-wrapper::before {
-  content: attr(data-dur);
+  content: attr(data-rot) " " attr(data-dur);
   position: absolute;
   right: 10px;
   bottom: 10px;
@@ -561,6 +561,12 @@ button:not(:disabled) {
   background-color: #000;
 }
 
+.has-rot video {
+  height: unset;
+  aspect-ratio: 1 / 1;
+  transform: rotate(var(--rot));
+}
+
 .trimmer-controls {
   padding: 16px;
   display: flex;
@@ -607,6 +613,11 @@ button:not(:disabled) {
   display: flex;
   gap: 8px;
   justify-content: center;
+}
+
+.preview-actions select {
+  width: 0;
+  flex: auto;
 }
 
 .range-slider-track {

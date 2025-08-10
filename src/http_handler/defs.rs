@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::common::Rotation;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VideoMetadataEditReq {
     pub thumbnail_name: String,
@@ -33,6 +35,7 @@ pub struct Clip {
     pub start: f64,
     pub end: f64,
     pub thumbnail_name: String,
+    pub override_rotation: Option<Rotation>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

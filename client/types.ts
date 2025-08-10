@@ -1,3 +1,5 @@
+import { Rotation } from "./api";
+
 export type ViewMode = { mode: "list" } | { mode: "feed" } | { mode: "grid" };
 
 export type Filter =
@@ -14,6 +16,7 @@ export type Clip = {
   // in seconds
   start: number;
   end: number;
+  overrideRotation?: Rotation;
 };
 
 export type ProjectState = {

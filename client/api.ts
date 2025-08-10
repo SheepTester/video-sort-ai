@@ -14,9 +14,11 @@ export type Video = {
     size: number;
     original_width: number;
     original_height: number;
+    original_rotation: Rotation;
     original_duration: number;
   } | null;
 };
+export type Rotation = "Unrotated" | "Neg90" | "Pos90";
 export type State = {
   videos: Video[];
 };
@@ -114,6 +116,7 @@ export type CookClip = {
   start: number;
   end: number;
   thumbnail_name: string;
+  override_rotation: Rotation | null;
 };
 
 export type Size = { width: number; height: number };

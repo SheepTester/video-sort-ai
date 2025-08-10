@@ -11,11 +11,14 @@ type ClipProps = {
 };
 
 export function Clip({ ends, clip, video, onClick, onMove }: ClipProps) {
+  const rot =
+    clip.overrideRotation ?? video.preview2?.original_rotation ?? "Unrotated";
   return (
     <div className="clip-item">
       <div
         className="clip-thumbnail-wrapper"
         onClick={onClick}
+        data-rot={rot === "Neg90" ? "↻" : rot === "Pos90" ? "↺" : ""}
         data-dur={
           clip.start === 0 && clip.end === video.preview2?.original_duration
             ? "Full"

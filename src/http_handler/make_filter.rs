@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::PathBuf};
 use tokio::process::Command;
 
 use crate::{
-    common::{Preview, State},
+    common::{Preview, Rotation, State},
     http_handler::defs::CookReq,
     util::MyResult,
 };
@@ -13,6 +13,7 @@ struct CookClip<'a> {
     preview: &'a Preview,
     start: f64,
     end: f64,
+    override_rotation: Option<Rotation>,
 }
 
 pub fn make_filter(
@@ -35,6 +36,7 @@ pub fn make_filter(
                         preview: &preview,
                         start: clip.start,
                         end: clip.end,
+                        override_rotation: clip.override_rotation.clone(),
                     })
                 })
         })
@@ -53,15 +55,28 @@ pub fn make_filter(
         let Some(clip_index) = inputs.iter().position(|input| *input == clip.video_path) else {
             Err("clip video missing in inputs")?
         };
-        let my_aspect_ratio =
-            clip.preview.original_width as f64 / clip.preview.original_height as f64;
+        let (original_width, original_height) = match &clip.override_rotation {
+            // One of them is unrotated and the other is not, so we need to transpose the size
+            Some(rot)
+                if (*rot == Rotation::Unrotated)
+                    != (clip.preview.original_rotation == Rotation::Unrotated) =>
+            {
+                (clip.preview.original_height, clip.preview.original_width)
+            }
+            _ => (clip.preview.original_width, clip.preview.original_height),
+        };
+        let my_aspect_ratio = original_width as f64 / original_height as f64;
         let need_bg = my_aspect_ratio != aspect_ratio;
         // trim video
         filters.push_str(&format!(
             "[{clip_index}:v] trim = start={} : end={}, setpts=PTS-STARTPTS",
             clip.start, clip.end
         ));
-        match clip.preview.original_rotation {
+        match clip
+            .override_rotation
+            .as_ref()
+            .unwrap_or(&clip.preview.original_rotation)
+        {
             crate::common::Rotation::Unrotated => {}
             crate::common::Rotation::Neg90 => filters.push_str(&format!(
                 ", transpose = dir=clock : passthrough={}",
@@ -110,21 +125,15 @@ pub fn make_filter(
             // 3. blur it
             // 4. scale the video up
             // 5. overlay the actual video
-            let cropped_width = clip
-                .preview
-                .original_width
-                .min(clip.preview.original_height * width / height);
-            let cropped_height = clip
-                .preview
-                .original_height
-                .min(clip.preview.original_width * height / width);
+            let cropped_width = original_width.min(original_height * width / height);
+            let cropped_height = original_height.min(original_width * height / width);
             const DOWNSCALE_FACTOR: u32 = 3;
             const BLUR_FACTOR: f64 = 0.1;
             // split up long strings because they break rustfmt
             filters.push_str(&format!(
                 "[clip{i}v_trimmed_copy] crop = {cropped_width}:{cropped_height}:{}:{}, ",
-                (clip.preview.original_width - cropped_width) / 2,
-                (clip.preview.original_height - cropped_height) / 2,
+                (original_width - cropped_width) / 2,
+                (original_height - cropped_height) / 2,
             ));
             filters.push_str(&format!(
                 "scale = {}:{}, gblur = sigma={}, scale = {width}:{height}, ",
@@ -138,7 +147,7 @@ pub fn make_filter(
                 "overlay = (main_w-overlay_w)/2:(main_h-overlay_h)/2 [clip{i}v_overlain]; "
             ));
             format!("[clip{i}v_overlain]")
-        } else if clip.preview.original_width != width || clip.preview.original_height != height {
+        } else if original_width != width || original_height != height {
             // aspect ratio is the same, just need to scale up/down
             filters.push_str(&format!(
                 "[clip{i}v_trimmed] scale = {width}:{height}, setsar = 1 [clip{i}v_scaled]; "
@@ -164,6 +173,9 @@ pub fn make_filter(
     // specify what the outputs are
     command.arg("-map").arg("[outv]");
     command.arg("-map").arg("[outa]");
+    // fast and good quality
+    command.arg("-preset").arg("veryfast");
+    command.arg("-crf").arg("18");
     // set rotation to 0 (termux ffmpeg seems to copy it)
     command.arg("-metadata:s:v").arg("rotate=0");
     // should be fine if we overwrite whatever's there. just in case, so it

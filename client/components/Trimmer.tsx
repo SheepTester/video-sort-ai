@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from "react";
+import { CSSProperties, memo, useEffect, useRef } from "react";
 import { Video } from "../api";
 import { Clip } from "../types";
 import { RangeSlider } from "./RangeSlider";
@@ -14,6 +14,8 @@ type TrimmerProps = {
   open: boolean;
   onClose: () => void;
 };
+
+const rotToAngle = { Unrotated: 0, Neg90: -90, Pos90: 90 };
 
 function Trimmer_({
   clip,
@@ -78,6 +80,10 @@ function Trimmer_({
     };
   }, [clip.end]);
 
+  const origRot = video.preview2?.original_rotation ?? "Unrotated";
+  const clipRot = clip.overrideRotation ?? origRot;
+  const previewRotAngle = rotToAngle[origRot] - rotToAngle[clipRot];
+
   return (
     <dialog
       ref={dialogRef}
@@ -90,7 +96,10 @@ function Trimmer_({
         </button>
         <h3>Trim Clip</h3>
       </form>
-      <div className="trimmer-preview">
+      <div
+        className={`trimmer-preview ${previewRotAngle ? "has-rot" : ""}`}
+        style={{ "--rot": `${previewRotAngle}deg` } as CSSProperties}
+      >
         <VideoComp video={video} videoRef={videoRef} preview />
       </div>
       <div className="trimmer-controls">
@@ -148,6 +157,25 @@ function Trimmer_({
         </div>
         <div className="preview-actions">
           <button onClick={() => preview("start")}>Play from Start</button>
+          <select
+            value={clipRot}
+            onChange={(e) => {
+              const val = e.currentTarget.value;
+              if (val === "Unrotated" || val === "Neg90" || val === "Pos90") {
+                if (
+                  video.preview2 &&
+                  val !== video.preview2.original_rotation
+                ) {
+                  onUpdate({ ...clip, overrideRotation: val });
+                }
+              }
+            }}
+          >
+            <option disabled>Rotate video data</option>
+            <option value="Unrotated">Unrotated</option>
+            <option value="Neg90">↻ 90&deg;</option>
+            <option value="Pos90">↺ 90&deg;</option>
+          </select>
           <button onClick={() => preview("end")}>Play near End</button>
         </div>
         <div className="trimmer-info">

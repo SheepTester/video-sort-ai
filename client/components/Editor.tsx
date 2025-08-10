@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { cook, createPreviewList, getPreviewUrl, Size, State } from "../api";
+import {
+  cook,
+  createPreviewList,
+  getPreviewUrl,
+  Size,
+  State,
+  Video,
+} from "../api";
 import { getThumbnailUrl } from "../api";
 import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
@@ -108,27 +115,33 @@ export function Editor({ state, tag }: EditorProps) {
   }
 
   const sizes = useMemo(() => {
-    const maxSize = videos
-      .filter((video) =>
-        projectState.clips.some((clip) => clip.thumb === video.thumbnail_name)
-      )
-      .reduce(
-        (a, b) => ({
-          width: Math.max(a.width, b.preview2?.original_width ?? 0),
-          height: Math.max(a.height, b.preview2?.original_height ?? 0),
-        }),
-        { width: 0, height: 0 }
-      );
+    const getSize = (clip: Clip) => {
+      const video = videoMap[clip.thumb];
+      const origRot = video.preview2?.original_rotation ?? "Unrotated";
+      const clipRot = clip.overrideRotation ?? origRot;
+      const { original_width = 0, original_height = 0 } = video.preview2 ?? {};
+      // transposed
+      return (origRot === "Unrotated") === (clipRot === "Unrotated")
+        ? { width: original_width, height: original_height }
+        : { width: original_height, height: original_width };
+    };
+    const maxSize = projectState.clips.reduce(
+      (cum, curr) => {
+        const { width, height } = getSize(curr);
+        return {
+          width: Math.max(cum.width, width),
+          height: Math.max(cum.height, height),
+        };
+      },
+      { width: 0, height: 0 }
+    );
     return Array.from(
       new Set<SizeStr>([
         `${maxSize.width}x${maxSize.height}`,
-        ...videos.flatMap((video): SizeStr[] =>
-          video.preview2
-            ? [
-                `${video.preview2.original_width}x${video.preview2.original_height}`,
-              ]
-            : []
-        ),
+        ...projectState.clips.map((clip): SizeStr => {
+          const { width, height } = getSize(clip);
+          return `${width}x${height}`;
+        }),
       ])
     );
   }, [videos, projectState]);
@@ -287,11 +300,14 @@ export function Editor({ state, tag }: EditorProps) {
           onClick={() => {
             setLoading(true);
             cook(
-              projectState.clips.map(({ start, end, thumb }) => ({
-                start,
-                end,
-                thumbnail_name: thumb,
-              })),
+              projectState.clips.map(
+                ({ start, end, thumb, overrideRotation }) => ({
+                  start,
+                  end,
+                  thumbnail_name: thumb,
+                  override_rotation: overrideRotation ?? null,
+                })
+              ),
               parseSize(size),
               `video-sort-${tag}`
             )

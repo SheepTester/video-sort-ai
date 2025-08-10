@@ -22,7 +22,8 @@ pub struct Video {
     #[serde(rename = "preview2")]
     pub preview: Option<Preview>,
     /// currently unused, but will be used for stowing videos in Termux to avoid
-    /// persecution by Google Photos
+    /// persecution by Google Photos, or for making it easier to find a
+    /// particular video in an app's file selector
     stow_state: StowState,
 }
 
@@ -73,7 +74,7 @@ pub struct Preview {
     pub original_rotation: Rotation,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Rotation {
     Unrotated,
     Neg90,
