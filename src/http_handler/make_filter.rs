@@ -76,7 +76,7 @@ pub fn make_filter(
             Err("clip video has no dimensions computed")?
         };
         let my_aspect_ratio = preview.original_width as f64 / preview.original_height as f64;
-        let need_bg = my_aspect_ratio == aspect_ratio;
+        let need_bg = my_aspect_ratio != aspect_ratio;
         // trim video
         filters.push_str(&format!(
             "[{clip_index}:v] trim = start={} : end={}, setpts=PTS-STARTPTS",
@@ -94,8 +94,7 @@ pub fn make_filter(
             clip.start, clip.end
         ));
 
-        let output_name = if preview.original_width != width || preview.original_height != height {
-            // stretch videos
+        let output_name = if need_bg {
             filters.push_str(&format!(
                 "[clip{i}v_trimmed] scale = {} [clip{i}v_scaled]; ",
                 if my_aspect_ratio >= aspect_ratio {
@@ -105,43 +104,45 @@ pub fn make_filter(
                     format!("-1:{height}")
                 }
             ));
-            if need_bg {
-                // create the blurred background:
-                // 1. crop the video to what is needed (crop =
-                //    width:height:x:y)
-                // 2. scale the video down
-                // 3. blur it
-                // 4. scale the video up
-                // 5. overlay the actual video
-                let cropped_width = preview
-                    .original_width
-                    .min(preview.original_height * width / height);
-                let cropped_height = preview
-                    .original_height
-                    .min(preview.original_width * height / width);
-                let crop = format!(
-                    "{cropped_width}:{cropped_height}:{}:{}",
-                    (preview.original_width - cropped_width) / 2,
-                    (preview.original_height - cropped_height) / 2
-                );
-                const DOWNSCALE_FACTOR: u32 = 3;
-                let downscale =
-                    format!("{}:{}", width / DOWNSCALE_FACTOR, height / DOWNSCALE_FACTOR);
-                // split up long strings because they break rustfmt
-                filters.push_str(&format!(
-                    "[clip{i}v_trimmed_copy] crop = {}, scale = {}, ",
-                    crop, downscale,
-                ));
-                filters.push_str(&format!(
-                    "gblur sigma={}, scale = {width}:{height} [clip{i}v_blurred]; ",
-                    (width / DOWNSCALE_FACTOR) as f64 / 5.0,
-                ));
-                filters.push_str(&format!("[clip{i}v_blurred] [clip{i}v_scaled] "));
-                filters.push_str(&format!("overlay [clip{i}v_overlain]; ",));
-                format!("[clip{i}v_overlain]")
-            } else {
-                format!("[clip{i}v_scaled]")
-            }
+
+            // create the blurred background:
+            // 1. crop the video to what is needed (crop =
+            //    width:height:x:y)
+            // 2. scale the video down
+            // 3. blur it
+            // 4. scale the video up
+            // 5. overlay the actual video
+            let cropped_width = preview
+                .original_width
+                .min(preview.original_height * width / height);
+            let cropped_height = preview
+                .original_height
+                .min(preview.original_width * height / width);
+            let crop = format!(
+                "{cropped_width}:{cropped_height}:{}:{}",
+                (preview.original_width - cropped_width) / 2,
+                (preview.original_height - cropped_height) / 2
+            );
+            const DOWNSCALE_FACTOR: u32 = 3;
+            let downscale = format!("{}:{}", width / DOWNSCALE_FACTOR, height / DOWNSCALE_FACTOR);
+            // split up long strings because they break rustfmt
+            filters.push_str(&format!(
+                "[clip{i}v_trimmed_copy] crop = {}, scale = {}, ",
+                crop, downscale,
+            ));
+            filters.push_str(&format!(
+                "gblur = sigma={}, scale = {width}:{height} [clip{i}v_blurred]; ",
+                (width / DOWNSCALE_FACTOR) as f64 / 5.0,
+            ));
+            filters.push_str(&format!("[clip{i}v_blurred] [clip{i}v_scaled] "));
+            filters.push_str(&format!("overlay [clip{i}v_overlain]; ",));
+            format!("[clip{i}v_overlain]")
+        } else if preview.original_width != width || preview.original_height != height {
+            // aspect ratio is the same, just need to scale up/down
+            filters.push_str(&format!(
+                "[clip{i}v_trimmed] scale = {width}:{height} [clip{i}v_scaled]; "
+            ));
+            format!("[clip{i}v_scaled]")
         } else {
             format!("[clip{i}v_trimmed]")
         };
@@ -160,6 +161,9 @@ pub fn make_filter(
     // specify what the outputs are
     command.arg("-map").arg("[outv]");
     command.arg("-map").arg("[outa]");
+    // should be fine if we overwrite whatever's there. just in case, so it
+    // doesn't get blocked by the yes thing
+    command.arg("-y");
     command.arg(output_path);
 
     Ok(())

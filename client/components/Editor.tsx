@@ -236,7 +236,7 @@ export function Editor({ state, tag }: EditorProps) {
               .finally(() => setLoading(false));
           }}
           className="prepare-btn"
-          disabled={projectState.clips.length === 0}
+          disabled={projectState.clips.length === 0 || loading}
         >
           Cook! 🧑‍🍳
         </button>

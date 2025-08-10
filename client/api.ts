@@ -115,7 +115,7 @@ export type CookClip = {
 };
 
 export const cook = (clips: CookClip[], baseSizingOn: string | null) =>
-  fetch(new URL("/preview", ROOT), {
+  fetch(new URL("/cook", ROOT), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ clips, sizing: baseSizingOn }),
