@@ -16,7 +16,11 @@ export function Clip({ ends, clip, video, onClick, onMove }: ClipProps) {
       <div
         className="clip-thumbnail-wrapper"
         onClick={onClick}
-        data-dur={formatSeconds(clip.end - clip.start)}
+        data-dur={
+          clip.start === 0 && clip.end === video.preview2?.original_duration
+            ? "Full"
+            : formatSeconds(clip.end - clip.start)
+        }
       >
         <img
           className="clip-thumbnail"

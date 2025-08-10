@@ -44,7 +44,14 @@ export function Editor({ state, tag }: EditorProps) {
   }, [projectState]);
 
   const videos = useMemo(
-    () => state.videos.filter((video) => video.tags.includes(tag)),
+    () =>
+      state.videos
+        .filter((video) => video.tags.includes(tag))
+        .sort(
+          (a, b) =>
+            a.mtime.secs_since_epoch - b.mtime.secs_since_epoch ||
+            a.mtime.nanos_since_epoch - b.mtime.nanos_since_epoch
+        ),
     [state, tag]
   );
 
@@ -130,6 +137,9 @@ export function Editor({ state, tag }: EditorProps) {
   return (
     <div className="editor-container">
       {trimmerModal}
+      <header>
+        <a href="/?edit">&lt; back</a> {tag}
+      </header>
       <div className="preview-area">
         <div className="preview-placeholder">
           {videos.map((video) => (

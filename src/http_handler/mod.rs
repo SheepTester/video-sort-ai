@@ -111,8 +111,12 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             };
             if !deleted_videos.is_empty() {
                 for video in &deleted_videos {
-                    let thumb_path = format!("{DIR_PATH}/thumbs/{}", video.thumbnail_name);
-                    fs::remove_file(&thumb_path).await?;
+                    if video.preview.is_some() {
+                        // remove preview video
+                        fs::remove_file(&format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name))
+                            .await?;
+                    }
+                    fs::remove_file(&format!("{DIR_PATH}/thumbs/{}", video.thumbnail_name)).await?;
                     fs::remove_file(&video.path).await?;
                     println!("D {:?}", video.path);
                 }
@@ -205,9 +209,9 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                 // fix the smaller dimension to 480
                                 if ffprobe_output.streams.0.width < ffprobe_output.streams.0.height
                                 {
-                                    "scale=480:-2"
+                                    "scale=144:-2"
                                 } else {
-                                    "scale=-2:480"
+                                    "scale=-2:144"
                                 },
                             )
                             // 16kbps and 32kbps sound basically just as bad

@@ -356,13 +356,33 @@ button:not(:disabled) {
 .select-tag p {
   margin: 0;
   border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-  padding: 20px;
+  padding: 10px;
+}
+.select-tag > div {
+  padding: 10px;
+  display: flex;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  flex-direction: column;
+  gap: 10px;
+}
+.select-tag > div > div {
+  display: flex;
+  gap: 10px;
 }
 .select-tag a {
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
   text-decoration: none;
+}
+.select-tag span {
+  margin-left: auto;
+}
+.select-tag button {
+  padding: 4px 8px;
+  font-size: 0.8em;
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
+  border-radius: 4px;
+}
+.select-tag .dangerous {
+  background-color: color-mix(in srgb, #ff4757 20%, transparent);
 }
 
 .editor-container {
@@ -370,6 +390,16 @@ button:not(:disabled) {
   display: flex;
   flex-direction: column;
   background-color: #111;
+}
+
+.editor-container header {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  font-size: 0.8em;
+}
+.editor-container header a {
+  text-decoration: none;
 }
 
 .preview-area {

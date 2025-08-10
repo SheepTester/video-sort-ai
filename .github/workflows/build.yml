@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'The version number (without v)'
+        description: "The version number (without v)"
         required: true
 
 permissions:
@@ -48,13 +48,20 @@ jobs:
             echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
           fi
 
-      - name: Build
+      - name: Install cross
+        run: |
+          cargo install --git https://github.com/cross-rs/cross.git cross --rev e281947ca900da425e4ecea7483cfde646c8a1ea
+
+      - name: Build client
         run: |
           npm install
           npm run client:build
+
+      - name: Build server
+        run: |
           echo -n "$VERSION" > src/static/version.txt
-          cargo install --git https://github.com/cross-rs/cross.git cross --rev e281947ca900da425e4ecea7483cfde646c8a1ea
           cross build --release --target aarch64-linux-android
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:

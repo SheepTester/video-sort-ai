@@ -96,6 +96,8 @@ const deleteVideos = (request: DeleteRequest) =>
 export const deleteVideo = (video: Video) =>
   deleteVideos({ Thumbnail: video.thumbnail_name });
 
+export const deleteVideosByTag = (tag: string) => deleteVideos({ Tag: tag });
+
 export const createPreviewList = (tag: string) =>
   fetch(new URL("/preview", ROOT), {
     method: "POST",
@@ -127,3 +129,15 @@ export const cook = (clips: CookClip[], size: Size, name: string) =>
         new Error(`HTTP ${r.status} error: ${await r.text()}`)
       );
   });
+
+export const renameTag = (oldName: string, newName: string) =>
+  fetch(new URL("/tag/rename", ROOT), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ old: oldName, new: newName }),
+  }).then(
+    async (r): Promise<State> =>
+      r.ok
+        ? r.json()
+        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
+  );
