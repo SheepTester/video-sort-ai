@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, os::unix::ffi::OsStrExt, process::Stdio, sync::Arc};
+use std::{ffi::OsStr, os::unix::ffi::OsStrExt, sync::Arc};
 
 use futures_util::TryStreamExt;
 use http_body_util::{BodyExt, Full, StreamBody};
@@ -10,7 +10,7 @@ use serde::Deserialize;
 use serde_json::from_str;
 use tokio::{
     fs::{self, File, metadata},
-    io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
+    io::{self, AsyncWriteExt},
     process::Command,
     sync::Semaphore,
 };
@@ -258,39 +258,22 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             let request: CookReq =
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
             let mut command = Command::new("ffmpeg");
+            // only log errors and stats
+            command.arg("-v").arg("error");
+            command.arg("-stats");
             {
                 let state = state.read().await;
                 make_filter(&state, &request, &mut command, "./test.mp4")?;
             }
-            command.stdout(Stdio::piped()).stderr(Stdio::piped());
-            eprintln!("$ {:?}", command);
 
-            let mut child = command.spawn()?;
-            let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
-            let mut reader = BufReader::new(stderr);
-            let mut line = String::new();
-            const PAT: &str = "time=(";
-            loop {
-                line.clear();
-                let bytes_read = reader.read_line(&mut line).await?;
-                if bytes_read == 0 {
-                    break;
-                }
-                if let Some(index) = line.find(PAT) {
-                    let start = index + PAT.len();
-                    if let Some(end) = line[start..].find(')') {
-                        eprint!("\rCook progress: {}", &line[start..end]);
-                    }
-                }
-            }
-
-            let ffmpeg_result = child.wait_with_output().await?;
-            if !ffmpeg_result.status.success() {
-                eprintln!("ffmpeg failure");
-                io::stderr().write_all(&ffmpeg_result.stderr).await?;
+            eprintln!("[cook] Cooking...");
+            let ffmpeg_result = command.status().await?;
+            if !ffmpeg_result.success() {
+                eprintln!("[cook] ffmpeg failure");
+                // io::stderr().write_all(&ffmpeg_result.stderr).await?;
                 Err("ffmpeg failure")?;
             }
-            eprintln!("Build success!");
+            eprintln!("[cook] Bon appetit!");
 
             Ok(Response::builder()
                 .status(StatusCode::NO_CONTENT)

@@ -428,6 +428,10 @@ button:not(:disabled) {
   border-radius: 4px;
 }
 
+.palette select {
+  align-self: center;
+}
+
 .used-indicator,
 .unavail-indicator {
   position: absolute;

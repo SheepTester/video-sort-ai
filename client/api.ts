@@ -114,11 +114,13 @@ export type CookClip = {
   thumbnail_name: string;
 };
 
-export const cook = (clips: CookClip[], baseSizingOn: string | null) =>
+export type Size = { width: number; height: number };
+
+export const cook = (clips: CookClip[], size: Size) =>
   fetch(new URL("/cook", ROOT), {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ clips, sizing: baseSizingOn }),
+    body: JSON.stringify({ clips, ...size }),
   }).then(
     async (r): Promise<State> =>
       r.ok

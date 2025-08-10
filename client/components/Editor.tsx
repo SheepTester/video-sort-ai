@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { cook, createPreviewList, getPreviewUrl, State } from "../api";
+import { cook, createPreviewList, getPreviewUrl, Size, State } from "../api";
 import { getThumbnailUrl } from "../api";
 import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
 import { ProjectState, Clip } from "../types";
 import { useSetState } from "../contexts/state";
+
+type SizeStr = `${number}x${number}`;
+function parseSize(size: string): Size {
+  const [width, height] = size.split("x").map(Number);
+  return { width, height };
+}
 
 export type EditorProps = {
   state: State;
@@ -93,6 +99,33 @@ export function Editor({ state, tag }: EditorProps) {
     }
     t += duration;
   }
+
+  const sizes = useMemo(() => {
+    const maxSize = videos
+      .filter((video) =>
+        projectState.clips.some((clip) => clip.thumb === video.thumbnail_name)
+      )
+      .reduce(
+        (a, b) => ({
+          width: Math.max(a.width, b.preview?.original_width ?? 0),
+          height: Math.max(a.height, b.preview?.original_height ?? 0),
+        }),
+        { width: 0, height: 0 }
+      );
+    return Array.from(
+      new Set<SizeStr>([
+        `${maxSize.width}x${maxSize.height}`,
+        ...videos.flatMap((video): SizeStr[] =>
+          video.preview
+            ? [
+                `${video.preview.original_width}x${video.preview.original_height}`,
+              ]
+            : []
+        ),
+      ])
+    );
+  }, [videos, projectState]);
+  const [size, setSize] = useState<SizeStr>("0x0");
 
   return (
     <div className="editor-container">
@@ -221,6 +254,25 @@ export function Editor({ state, tag }: EditorProps) {
         >
           Prepare previews
         </button>
+        <select
+          value={size}
+          onChange={(e) => {
+            const { width, height } = parseSize(e.currentTarget.value);
+            setSize(`${width}x${height}`);
+          }}
+        >
+          <option value="0x0" disabled>
+            Select a size
+          </option>
+          {...sizes.map((size) => {
+            const { width, height } = parseSize(size);
+            return (
+              <option key={size} value={size}>
+                {width} &times; {height}
+              </option>
+            );
+          })}
+        </select>
         <button
           onClick={() => {
             setLoading(true);
@@ -230,13 +282,15 @@ export function Editor({ state, tag }: EditorProps) {
                 end,
                 thumbnail_name: thumb,
               })),
-              null
+              parseSize(size)
             )
               .then(setState)
               .finally(() => setLoading(false));
           }}
           className="prepare-btn"
-          disabled={projectState.clips.length === 0 || loading}
+          disabled={
+            projectState.clips.length === 0 || loading || size === "0x0"
+          }
         >
           Cook! 🧑‍🍳
         </button>

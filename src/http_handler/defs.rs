@@ -38,6 +38,6 @@ pub struct Clip {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CookReq {
     pub clips: Vec<Clip>,
-    /// thumbnail of video to use size of
-    pub sizing: Option<String>,
+    pub width: u32,
+    pub height: u32,
 }
