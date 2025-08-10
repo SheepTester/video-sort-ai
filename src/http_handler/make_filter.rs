@@ -23,7 +23,7 @@ pub fn make_filter(
 ) -> MyResult<()> {
     // disable auto handling of rotated videos, just in case (I don't think it
     // does)
-    command.arg("-noautorotate");
+    // command.arg("-noautorotate");
 
     let clips = request
         .clips
@@ -65,25 +65,25 @@ pub fn make_filter(
             "[{clip_index}:v] trim = start={} : end={}, setpts=PTS-STARTPTS",
             clip.start, clip.end
         ));
-        match clip.preview.original_rotation {
-            crate::common::Rotation::Unrotated => {}
-            crate::common::Rotation::Neg90 => filters.push_str(&format!(
-                ", transpose = dir=cclock : passthrough={}",
-                if my_aspect_ratio > 1.0 {
-                    "landscape"
-                } else {
-                    "portrait"
-                }
-            )),
-            crate::common::Rotation::Pos90 => filters.push_str(&format!(
-                ", transpose = dir=clock : passthrough={}",
-                if my_aspect_ratio > 1.0 {
-                    "landscape"
-                } else {
-                    "portrait"
-                }
-            )),
-        }
+        // match clip.preview.original_rotation {
+        //     crate::common::Rotation::Unrotated => {}
+        //     crate::common::Rotation::Neg90 => filters.push_str(&format!(
+        //         ", transpose = dir=cclock : passthrough={}",
+        //         if my_aspect_ratio > 1.0 {
+        //             "landscape"
+        //         } else {
+        //             "portrait"
+        //         }
+        //     )),
+        //     crate::common::Rotation::Pos90 => filters.push_str(&format!(
+        //         ", transpose = dir=clock : passthrough={}",
+        //         if my_aspect_ratio > 1.0 {
+        //             "landscape"
+        //         } else {
+        //             "portrait"
+        //         }
+        //     )),
+        // }
         if need_bg {
             filters.push_str(&format!(
                 ", split [clip{i}v_trimmed] [clip{i}v_trimmed_copy]; "
