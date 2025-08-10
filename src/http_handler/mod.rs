@@ -7,7 +7,8 @@ use hyper::{
     body::{Buf, Bytes, Frame},
 };
 use tokio::{
-    fs::{self, File},
+    fs::{self, File, metadata},
+    io::{self, AsyncWriteExt},
     process::Command,
     sync::Semaphore,
 };
@@ -24,7 +25,7 @@ use crate::{
             escape_html,
         },
     },
-    util::BoxedError,
+    util::{BoxedError, format_size},
 };
 
 mod defs;
@@ -153,6 +154,39 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         let (width, height) = ffprobe_output
                             .split_once('x')
                             .ok_or("no x in ffprobe output")?;
+
+                        let preview_path =
+                            format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name);
+                        let ffmpeg_result = Command::new("ffmpeg")
+                            .arg("-i")
+                            .arg(&video.path)
+                            // fairly low quality
+                            .arg("-crf")
+                            .arg("32")
+                            // 480p; -2 means to keep the other dimension even,
+                            // because videos like even resolutions
+                            .arg("-vf")
+                            .arg("scale=if(gte(iw,ih),480,-2):if(gte(iw,ih),-2,480)")
+                            // 16kbps and 32kbps sound basically just as bad
+                            .arg("-b:a")
+                            .arg("16k")
+                            // unspecified video and audio codec defaults to
+                            // h264 and aac for mp4
+                            .arg(&preview_path)
+                            .output()
+                            .await?;
+                        if !ffmpeg_result.status.success() {
+                            eprintln!("Failed to create preview for {:?}.", video.path.file_name());
+                            io::stderr().write_all(&ffmpeg_result.stderr).await?;
+                            return Ok::<(), BoxedError>(());
+                        }
+                        let size = metadata(&preview_path).await?.len();
+                        eprintln!(
+                            "[preview] {:?} ({})",
+                            video.path.file_name(),
+                            format_size(size)
+                        );
+
                         {
                             let mut state = state.write().await;
                             state
@@ -161,7 +195,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                 .find(|v| v.path == video.path)
                                 .ok_or("cant find video i was making preview for")?
                                 .preview = Some(Preview {
-                                size: 0,
+                                size,
                                 original_width: width.parse()?,
                                 original_height: height.parse()?,
                             });
