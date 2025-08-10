@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPreviewList, getPreviewUrl, State } from "../api";
+import { cook, createPreviewList, getPreviewUrl, State } from "../api";
 import { getThumbnailUrl } from "../api";
 import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
@@ -220,6 +220,25 @@ export function Editor({ state, tag }: EditorProps) {
           disabled={videos.every((video) => video.preview) || loading}
         >
           Prepare previews
+        </button>
+        <button
+          onClick={() => {
+            setLoading(true);
+            cook(
+              projectState.clips.map(({ start, end, thumb }) => ({
+                start,
+                end,
+                thumbnail_name: thumb,
+              })),
+              null
+            )
+              .then(setState)
+              .finally(() => setLoading(false));
+          }}
+          className="prepare-btn"
+          disabled={projectState.clips.length === 0}
+        >
+          Cook! 🧑‍🍳
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ffi::OsStr, os::unix::ffi::OsStrExt, sync::Arc};
+use std::{ffi::OsStr, os::unix::ffi::OsStrExt, sync::Arc};
 
 use futures_util::TryStreamExt;
 use http_body_util::{BodyExt, Full, StreamBody};
@@ -17,7 +17,7 @@ use tokio::{
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, Preview, SharedState, Video, save_state},
+    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, Preview, SharedState, save_state},
     http_handler::{
         defs::{
             CookReq, DeleteRequest, JsonError, PreparePreviewReq, RenameTagRequest,
@@ -260,7 +260,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             let mut command = Command::new("ffmpeg");
             {
                 let state = state.read().await;
-                make_filter(&state, &request, &mut command)?;
+                make_filter(&state, &request, &mut command, "./test.mp4")?;
             }
 
             let ffmpeg_result = command.output().await?;
@@ -270,7 +270,10 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 Err("ffmpeg failure")?;
             }
 
-            build_json_response(&*state.read().await)
+            Ok(Response::builder()
+                .status(StatusCode::NO_CONTENT)
+                .header("Access-Control-Allow-Origin", CORS)
+                .body(Full::new(Bytes::new()).map_err(|e| match e {}).boxed())?)
         }
         (&Method::OPTIONS, _) => Ok(Response::builder()
             .status(StatusCode::NO_CONTENT)

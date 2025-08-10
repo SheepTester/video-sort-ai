@@ -14,7 +14,12 @@ struct CookClip<'a> {
     end: f64,
 }
 
-pub fn make_filter(state: &State, request: &CookReq, command: &mut Command) -> MyResult<()> {
+pub fn make_filter(
+    state: &State,
+    request: &CookReq,
+    command: &mut Command,
+    output_path: &str,
+) -> MyResult<()> {
     let clips = request
         .clips
         .iter()
@@ -108,32 +113,31 @@ pub fn make_filter(state: &State, request: &CookReq, command: &mut Command) -> M
                 // 3. blur it
                 // 4. scale the video up
                 // 5. overlay the actual video
-                let crop = "";
-                let downscale = if my_aspect_ratio >= aspect_ratio {
-                    // this clip is wider, so use their height
-                    format!("-1:{height}")
-                } else {
-                    format!("{width}:-1")
-                };
-                let upscale = if my_aspect_ratio >= aspect_ratio {
-                    // this clip is wider, so use their height
-                    format!("-1:{height}")
-                } else {
-                    format!("{width}:-1")
-                };
+                let cropped_width = preview
+                    .original_width
+                    .min(preview.original_height * width / height);
+                let cropped_height = preview
+                    .original_height
+                    .min(preview.original_width * height / width);
+                let crop = format!(
+                    "{cropped_width}:{cropped_height}:{}:{}",
+                    (preview.original_width - cropped_width) / 2,
+                    (preview.original_height - cropped_height) / 2
+                );
+                const DOWNSCALE_FACTOR: u32 = 3;
+                let downscale =
+                    format!("{}:{}", width / DOWNSCALE_FACTOR, height / DOWNSCALE_FACTOR);
+                // split up long strings because they break rustfmt
                 filters.push_str(&format!(
                     "[clip{i}v_trimmed_copy] crop = {}, scale = {}, ",
                     crop, downscale,
                 ));
                 filters.push_str(&format!(
-                    "gblur sigma={}, scale = {} [clip{i}v_blurred]; ",
-                    "", upscale,
+                    "gblur sigma={}, scale = {width}:{height} [clip{i}v_blurred]; ",
+                    (width / DOWNSCALE_FACTOR) as f64 / 5.0,
                 ));
                 filters.push_str(&format!("[clip{i}v_blurred] [clip{i}v_scaled] "));
-                filters.push_str(&format!(
-                    "overlay = {} [clip{i}v_overlain]; ",
-                    "0:0" // TODO
-                ));
+                filters.push_str(&format!("overlay [clip{i}v_overlain]; ",));
                 format!("[clip{i}v_overlain]")
             } else {
                 format!("[clip{i}v_scaled]")
@@ -156,7 +160,7 @@ pub fn make_filter(state: &State, request: &CookReq, command: &mut Command) -> M
     // specify what the outputs are
     command.arg("-map").arg("[outv]");
     command.arg("-map").arg("[outa]");
-    command.arg("test.mp4");
+    command.arg(output_path);
 
     Ok(())
 }

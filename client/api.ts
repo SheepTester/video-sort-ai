@@ -1,3 +1,5 @@
+import { Clip } from "./types";
+
 declare const ROOT: string;
 
 export type Video = {
@@ -99,6 +101,24 @@ export const createPreviewList = (tag: string) =>
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ tag }),
+  }).then(
+    async (r): Promise<State> =>
+      r.ok
+        ? r.json()
+        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
+  );
+
+export type CookClip = {
+  start: number;
+  end: number;
+  thumbnail_name: string;
+};
+
+export const cook = (clips: CookClip[], baseSizingOn: string | null) =>
+  fetch(new URL("/preview", ROOT), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ clips, sizing: baseSizingOn }),
   }).then(
     async (r): Promise<State> =>
       r.ok
