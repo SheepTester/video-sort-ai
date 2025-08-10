@@ -317,6 +317,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             }
 
             eprintln!("{}", faded("[cook] Cooking..."));
+            eprintln!("{}", faded(&format!("[cook] {command:?}")));
             let ffmpeg_result = command.status().await?;
             if !ffmpeg_result.success() {
                 eprintln!("[cook] ffmpeg failure");

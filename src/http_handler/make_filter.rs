@@ -65,11 +65,25 @@ pub fn make_filter(
             "[{clip_index}:v] trim = start={} : end={}, setpts=PTS-STARTPTS",
             clip.start, clip.end
         ));
-        // match clip.preview.original_rotation {
-        //     crate::common::Rotation::Unrotated => {}
-        //     crate::common::Rotation::Neg90 => filters.push_str(", transpose=2"),
-        //     crate::common::Rotation::Pos90 => filters.push_str(", transpose=1"),
-        // }
+        match clip.preview.original_rotation {
+            crate::common::Rotation::Unrotated => {}
+            crate::common::Rotation::Neg90 => filters.push_str(&format!(
+                ", transpose = dir=cclock : passthrough={}",
+                if my_aspect_ratio > 1.0 {
+                    "landscape"
+                } else {
+                    "portrait"
+                }
+            )),
+            crate::common::Rotation::Pos90 => filters.push_str(&format!(
+                ", transpose = dir=clock : passthrough={}",
+                if my_aspect_ratio > 1.0 {
+                    "landscape"
+                } else {
+                    "portrait"
+                }
+            )),
+        }
         if need_bg {
             filters.push_str(&format!(
                 ", split [clip{i}v_trimmed] [clip{i}v_trimmed_copy]; "
@@ -84,7 +98,7 @@ pub fn make_filter(
 
         let output_name = if need_bg {
             filters.push_str(&format!(
-                "[clip{i}v_trimmed] scale = {} [clip{i}v_scaled]; ",
+                "[clip{i}v_trimmed] scale = {}, setsar = 1 [clip{i}v_scaled]; ",
                 if my_aspect_ratio >= aspect_ratio {
                     // this clip is wider, use their width
                     format!("{width}:-1")
@@ -117,11 +131,12 @@ pub fn make_filter(
                 (clip.preview.original_height - cropped_height) / 2,
             ));
             filters.push_str(&format!(
-                "scale = {}:{}, gblur = sigma={}, scale = {width}:{height} [clip{i}v_blurred]; ",
+                "scale = {}:{}, gblur = sigma={}, scale = {width}:{height}, ",
                 width / DOWNSCALE_FACTOR,
                 height / DOWNSCALE_FACTOR,
                 (width / DOWNSCALE_FACTOR) as f64 * BLUR_FACTOR,
             ));
+            filters.push_str(&format!("setsar = 1 [clip{i}v_blurred]; "));
             filters.push_str(&format!("[clip{i}v_blurred] [clip{i}v_scaled] "));
             filters.push_str(&format!(
                 "overlay = (main_w-overlay_w)/2:(main_h-overlay_h)/2 [clip{i}v_overlain]; "
@@ -130,7 +145,7 @@ pub fn make_filter(
         } else if clip.preview.original_width != width || clip.preview.original_height != height {
             // aspect ratio is the same, just need to scale up/down
             filters.push_str(&format!(
-                "[clip{i}v_trimmed] scale = {width}:{height} [clip{i}v_scaled]; "
+                "[clip{i}v_trimmed] scale = {width}:{height}, setsar = 1 [clip{i}v_scaled]; "
             ));
             format!("[clip{i}v_scaled]")
         } else {
