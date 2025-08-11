@@ -183,9 +183,20 @@ export function Editor({ state, tag }: EditorProps) {
 
     const handleTimeUpdate = () => {
       if (video.paused) return;
-      setTime(t + video.currentTime - viewingClip.clip.start);
+      if (video.currentTime >= viewingClip.clip.end) {
+        setTime(t + viewingClip.clip.end - viewingClip.clip.start);
+      } else {
+        setTime(t + video.currentTime - viewingClip.clip.start);
+      }
     };
     video.addEventListener("timeupdate", handleTimeUpdate);
+
+    const handlePause = () => {
+      if (playing && video.currentTime >= viewingClip.clip.end - 0.1) {
+        setTime(t + viewingClip.clip.end - viewingClip.clip.start);
+      }
+    };
+    video.addEventListener("pause", handlePause);
 
     const targetTime = time - t + viewingClip.clip.start;
     if (Math.abs(video.currentTime - targetTime) > 0.2) {
@@ -206,6 +217,7 @@ export function Editor({ state, tag }: EditorProps) {
     }
     return () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("pause", handlePause);
     };
   }, [playing, viewingClip]);
 
