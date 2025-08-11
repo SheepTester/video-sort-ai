@@ -3,14 +3,14 @@ use std::{collections::HashSet, path::PathBuf};
 use tokio::process::Command;
 
 use crate::{
-    common::{Preview, Rotation, State},
+    common::{ProbeResult, Rotation, State},
     http_handler::defs::CookReq,
     util::MyResult,
 };
 
 struct CookClip<'a> {
     video_path: &'a PathBuf,
-    preview: &'a Preview,
+    preview: &'a ProbeResult,
     start: f64,
     end: f64,
     override_rotation: Option<Rotation>,
@@ -31,7 +31,7 @@ pub fn make_filter(
                 .iter()
                 .find(|video| video.thumbnail_name == clip.thumbnail_name)
                 .and_then(|video| {
-                    video.preview.as_ref().map(|preview| CookClip {
+                    video.probe.as_ref().map(|preview| CookClip {
                         video_path: video.current_loc(),
                         preview: &preview,
                         start: clip.start,
@@ -57,10 +57,10 @@ pub fn make_filter(
         };
         let (original_width, original_height) = match &clip.override_rotation {
             // One of them is unrotated and the other is not, so we need to transpose the size
-            Some(rot) if rot.transposed() != clip.preview.original_rotation.transposed() => {
-                (clip.preview.original_height, clip.preview.original_width)
+            Some(rot) if rot.transposed() != clip.preview.rotation.transposed() => {
+                (clip.preview.height, clip.preview.width)
             }
-            _ => (clip.preview.original_width, clip.preview.original_height),
+            _ => (clip.preview.width, clip.preview.height),
         };
         let my_aspect_ratio = original_width as f64 / original_height as f64;
         let need_bg = my_aspect_ratio != aspect_ratio;
@@ -77,7 +77,7 @@ pub fn make_filter(
         match clip
             .override_rotation
             .as_ref()
-            .unwrap_or(&clip.preview.original_rotation)
+            .unwrap_or(&clip.preview.rotation)
         {
             crate::common::Rotation::Unrotated => {}
             crate::common::Rotation::Neg90 => filters.push_str(&format!(", transpose = dir=clock")),

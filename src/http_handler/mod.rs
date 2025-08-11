@@ -7,17 +7,16 @@ use hyper::{
     body::{Buf, Bytes, Frame},
 };
 use serde::Deserialize;
-use serde_json::from_str;
 use tokio::{
     fs::{self, File},
-    io::{self, AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncSeekExt},
     process::Command,
     sync::Semaphore,
 };
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, Preview, SharedState, save_state},
+    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, SharedState, save_state},
     fmt::faded,
     http_handler::{
         defs::{
@@ -25,27 +24,34 @@ use crate::{
             VideoSelectRequest,
         },
         make_filter::make_filter,
+        probe::probe_video,
         util::{
             CORS, MyResponse, build_html_response, build_json_response, build_text_response,
             escape_html,
         },
     },
-    util::{BoxedError, format_size},
+    util::BoxedError,
 };
 
 mod defs;
 mod make_filter;
+mod probe;
 mod util;
 
 #[derive(Deserialize, Debug)]
-struct FfprobeOutputStream {
+struct FfprobeVideoStream {
     width: u32,
     height: u32,
-    side_data_list: Option<(FfprobeOutputStreamSideData,)>,
+    pix_fmt: String,
+    color_space: String,
+    color_transfer: String,
+    color_primaries: String,
+    bit_rate: String,
+    side_data_list: Option<(FfprobeVideoStreamSideData,)>,
 }
 
 #[derive(Deserialize, Debug)]
-struct FfprobeOutputStreamSideData {
+struct FfprobeVideoStreamSideData {
     rotation: i32,
 }
 
@@ -55,9 +61,22 @@ struct FfprobeOutputFormat {
 }
 
 #[derive(Deserialize, Debug)]
-struct FfprobeOutput {
-    streams: (FfprobeOutputStream,),
+struct FfprobeVideo {
+    streams: (FfprobeVideoStream,),
     format: FfprobeOutputFormat,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeAudioStream {
+    sample_rate: String,
+    channels: u32,
+    channel_layout: String,
+    bit_rate: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeAudio {
+    streams: Vec<FfprobeAudioStream>,
 }
 
 async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState) -> MyResponse {
@@ -186,7 +205,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 .videos
                 .iter()
                 .filter_map(|video| {
-                    if video.tags.contains(&request.tag) && video.preview.is_none() {
+                    if video.tags.contains(&request.tag) && video.probe.is_none() {
                         Some(video.clone())
                     } else {
                         None
@@ -210,99 +229,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     let semaphore = semaphore.clone();
                     let handle = tokio::spawn(async move {
                         let _permit = semaphore.acquire_owned().await?;
-                        let ffprobe_result = Command::new("ffprobe")
-                            // only print errors
-                            .arg("-v")
-                            .arg("error")
-                            // select one video stream
-                            .arg("-select_streams")
-                            .arg("v:0")
-                            // only print these fields
-                            .arg("-show_entries")
-                            .arg("stream=width,height:format=duration:stream_side_data=rotation")
-                            .arg("-output_format")
-                            .arg("json")
-                            .arg(video.current_loc())
-                            .output()
-                            .await?;
-                        if !ffprobe_result.status.success() {
-                            eprintln!("[preview] ffprobe error in {}", video.display_name());
-                            io::stderr().write_all(&ffprobe_result.stderr).await?;
-                            Err("ffprobe error")?;
-                        }
-                        let ffprobe_output: FfprobeOutput =
-                            from_str(&String::from_utf8(ffprobe_result.stdout)?)?;
-                        let original_rotation = match &ffprobe_output.streams.0.side_data_list {
-                            Some((FfprobeOutputStreamSideData { rotation: 90 },)) => {
-                                crate::common::Rotation::Pos90
-                            }
-                            Some((FfprobeOutputStreamSideData { rotation: -90 },)) => {
-                                crate::common::Rotation::Neg90
-                            }
-                            Some((FfprobeOutputStreamSideData { rotation: -180 },)) => {
-                                crate::common::Rotation::Neg180
-                            }
-                            None => crate::common::Rotation::Unrotated,
-                            Some(r) => Err(format!("Unknown rotation {}", r.0.rotation))?,
-                        };
-
-                        // let preview_path =
-                        //     format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name);
-                        // let ffmpeg_result = Command::new("ffmpeg")
-                        //     .arg("-i")
-                        //     .arg(video.current_loc())
-                        //     // 144p; -2 means to keep the other dimension even,
-                        //     // because videos like even resolutions
-                        //     .arg("-vf")
-                        //     .arg(
-                        //         // fix the smaller dimension to 480
-                        //         if ffprobe_output.streams.0.width < ffprobe_output.streams.0.height
-                        //         {
-                        //             "scale=144:-2"
-                        //         } else {
-                        //             "scale=-2:144"
-                        //         },
-                        //     )
-                        //     // i'd rather it be fast than small
-                        //     .arg("-preset")
-                        //     .arg("ultrafast")
-                        //     // fairly low quality
-                        //     .arg("-crf")
-                        //     .arg("32")
-                        //     // 16k and 32k sound fairly similar
-                        //     .arg("-b:a")
-                        //     .arg("16k")
-                        //     // make video seekable
-                        //     .arg("-movflags")
-                        //     .arg("+faststart")
-                        //     .arg("-y")
-                        //     // unspecified video and audio codec defaults to
-                        //     // h264 and aac for mp4
-                        //     .arg(&preview_path)
-                        //     .output()
-                        //     .await?;
-                        // if !ffmpeg_result.status.success() {
-                        //     eprintln!(
-                        //         "[preview] Failed to create preview for {}.",
-                        //         video.display_name()
-                        //     );
-                        //     io::stderr().write_all(&ffmpeg_result.stderr).await?;
-                        //     Err("ffmpeg preview error")?;
-                        // }
-                        let size = 0; // metadata(&preview_path).await?.len();
-                        eprintln!("[preview] {} ({})", video.display_name(), format_size(size));
-
-                        let (original_width, original_height) = if original_rotation.transposed() {
-                            (
-                                ffprobe_output.streams.0.height,
-                                ffprobe_output.streams.0.width,
-                            )
-                        } else {
-                            (
-                                ffprobe_output.streams.0.width,
-                                ffprobe_output.streams.0.height,
-                            )
-                        };
+                        let result = probe_video(video.current_loc()).await?;
                         {
                             let mut state = state.write().await;
                             state
@@ -310,13 +237,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                                 .iter_mut()
                                 .find(|v| v.thumbnail_name == video.thumbnail_name)
                                 .ok_or("cant find video i was making preview for")?
-                                .preview = Some(Preview {
-                                size,
-                                original_width,
-                                original_height,
-                                original_duration: ffprobe_output.format.duration.parse()?,
-                                original_rotation,
-                            });
+                                .probe = Some(result);
                         }
                         save_state(&*state.read().await).await?;
                         Ok::<(), BoxedError>(())

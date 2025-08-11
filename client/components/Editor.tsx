@@ -106,12 +106,12 @@ export function Editor({ state, tag }: EditorProps) {
     }));
   }, []);
   const handleClose = useCallback(() => setTrimmingClip(null), []);
-  if (clip && videoMap[clip.thumb].preview3) {
+  if (clip && videoMap[clip.thumb].probe) {
     trimmerModal = (
       <Trimmer
         clip={clip}
         video={videoMap[clip.thumb]}
-        duration={videoMap[clip.thumb].preview3?.original_duration ?? 0}
+        duration={videoMap[clip.thumb].probe?.duration ?? 0}
         otherClips={otherClips}
         onUpdate={handleUpdate}
         open={trimmingClip !== null}
@@ -147,9 +147,10 @@ export function Editor({ state, tag }: EditorProps) {
   const sizes = useMemo(() => {
     const getSize = (clip: Clip) => {
       const video = videoMap[clip.thumb];
-      const origRot = video.preview3?.original_rotation ?? "Unrotated";
+      const origRot = video.probe?.rotation ?? "Unrotated";
       const clipRot = clip.overrideRotation ?? origRot;
-      const { original_width = 0, original_height = 0 } = video.preview3 ?? {};
+      const { width: original_width = 0, height: original_height = 0 } =
+        video.probe ?? {};
       return isTransposed(origRot) === isTransposed(clipRot)
         ? { width: original_width, height: original_height }
         : { width: original_height, height: original_width };
@@ -225,7 +226,7 @@ export function Editor({ state, tag }: EditorProps) {
           {videos.map((video) => {
             let rotate = 0;
             if (viewingClip?.clip.thumb === video.thumbnail_name) {
-              const origRot = video.preview3?.original_rotation ?? "Unrotated";
+              const origRot = video.probe?.rotation ?? "Unrotated";
               const clipRot = viewingClip.clip.overrideRotation ?? origRot;
               rotate = rotToAngle[origRot] - rotToAngle[clipRot];
             }
@@ -319,8 +320,8 @@ export function Editor({ state, tag }: EditorProps) {
             key={video.thumbnail_name}
             className="palette-item"
             onClick={() => {
-              if (video.preview3) {
-                const duration = video.preview3.original_duration;
+              if (video.probe) {
+                const duration = video.probe.duration;
                 setProjectState((p) => ({
                   ...p,
                   clips: [
@@ -335,13 +336,13 @@ export function Editor({ state, tag }: EditorProps) {
                 }));
               }
             }}
-            disabled={!video.preview3}
+            disabled={!video.probe}
           >
             <img src={getThumbnailUrl(video).toString()} />
             {projectState.clips.some(
               (c) => c.thumb === video.thumbnail_name
             ) && <div className="used-indicator">✅</div>}
-            {!video.preview3 && <div className="unavail-indicator">⛔</div>}
+            {!video.probe && <div className="unavail-indicator">⛔</div>}
           </button>
         ))}
         <button
@@ -353,7 +354,7 @@ export function Editor({ state, tag }: EditorProps) {
               .finally(() => setLoading(false));
           }}
           className="prepare-btn"
-          disabled={videos.every((video) => video.preview3) || loading}
+          disabled={videos.every((video) => video.probe) || loading}
         >
           Prepare previews
         </button>

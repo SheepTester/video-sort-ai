@@ -10,12 +10,22 @@ export type Video = {
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
   stow_state: "Original" | { Elsewhere: string };
   size: number;
-  preview3?: {
-    size: number;
-    original_width: number;
-    original_height: number;
-    original_rotation: Rotation;
-    original_duration: number;
+  probe?: {
+    width: number;
+    height: number;
+    rotation: Rotation;
+    duration: number;
+    pix_fmt: string;
+    color_space: string;
+    color_transfer: string;
+    color_primaries: string;
+    bit_rate: number;
+    audio?: {
+      sample_rate: number;
+      bit_rate: number;
+      channels: number;
+      channel_layout: string;
+    };
   } | null;
 };
 export type Rotation = "Unrotated" | "Neg90" | "Pos90" | "Neg180";

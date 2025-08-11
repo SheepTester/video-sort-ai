@@ -119,12 +119,7 @@ export function TagSelect({ state }: TagSelectProps) {
               Delete
             </button>
             <span className="tag-total-size">
-              {formatSize(
-                videos.reduce(
-                  (cum, curr) => cum + curr.size + (curr.preview3?.size ?? 0),
-                  0
-                )
-              )}
+              {formatSize(videos.reduce((cum, curr) => cum + curr.size, 0))}
             </span>
           </div>
         </div>

@@ -19,8 +19,7 @@ pub struct Video {
     pub note: String,
     pub mtime: SystemTime,
     pub size: u64,
-    #[serde(rename = "preview3")]
-    pub preview: Option<Preview>,
+    pub probe: Option<ProbeResult>,
     /// currently unused, but will be used for stowing videos in Termux to avoid
     /// persecution by Google Photos, or for making it easier to find a
     /// particular video in an app's file selector
@@ -36,7 +35,7 @@ impl Video {
             note: String::new(),
             mtime,
             size,
-            preview: None,
+            probe: None,
             stow_state: StowState::Original,
         }
     }
@@ -88,12 +87,28 @@ enum StowState {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Preview {
-    pub size: u64,
-    pub original_width: u32,
-    pub original_height: u32,
-    pub original_duration: f64,
-    pub original_rotation: Rotation,
+pub struct ProbeResult {
+    pub width: u32,
+    pub height: u32,
+    pub duration: f64,
+    pub rotation: Rotation,
+    // stuff to match stream settings (excl codec, which I am forcing to be
+    // h264)
+    pub pix_fmt: String,
+    pub color_space: String,
+    pub color_transfer: String,
+    pub color_primaries: String,
+    pub bit_rate: u32,
+    pub audio: Option<AudioProbeResult>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AudioProbeResult {
+    // stuff to match stream settings (excl codec, which I am forcing to be aac)
+    pub sample_rate: u32,
+    pub bit_rate: u32,
+    pub channels: u32,
+    pub channel_layout: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]

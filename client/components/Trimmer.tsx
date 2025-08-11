@@ -80,7 +80,7 @@ function Trimmer_({
     };
   }, [clip.end]);
 
-  const origRot = video.preview3?.original_rotation ?? "Unrotated";
+  const origRot = video.probe?.rotation ?? "Unrotated";
   const clipRot = clip.overrideRotation ?? origRot;
   const previewRotAngle = rotToAngle[origRot] - rotToAngle[clipRot];
 
@@ -167,7 +167,7 @@ function Trimmer_({
                 val === "Pos90" ||
                 val === "Neg180"
               ) {
-                if (video.preview3) {
+                if (video.probe) {
                   onUpdate({
                     ...clip,
                     overrideRotation: val !== origRot ? val : undefined,
