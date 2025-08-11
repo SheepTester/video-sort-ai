@@ -329,15 +329,9 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
 
             tokio::spawn(async move {
                 match child.wait().await {
-                    Ok(status) if status.success() => {
-                        eprintln!("[cook] Bon appetit! {out_path}");
-                    }
-                    Ok(status) => {
-                        eprintln!("[cook] ffmpeg failed with status: {status}");
-                    }
-                    Err(err) => {
-                        eprintln!("[cook] ffmpeg failed to run: {err}");
-                    }
+                    Ok(status) if status.success() => eprintln!("[cook] Bon appetit! {out_path}"),
+                    Ok(status) => eprintln!("[cook] ffmpeg failed with status: {status}"),
+                    Err(err) => eprintln!("[cook] ffmpeg failed to run: {err}"),
                 }
             });
 

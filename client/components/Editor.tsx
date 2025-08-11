@@ -33,6 +33,7 @@ export function Editor({ state, tag }: EditorProps) {
   const [lastTrimmingClip, setLastTrimmingClip] = useState<string | null>(null);
   const setState = useSetState();
   const [loading, setLoading] = useState(false);
+  const [cookStatus, setCookStatus] = useState("");
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement>>({});
@@ -346,26 +347,31 @@ export function Editor({ state, tag }: EditorProps) {
           })}
         </select>
         <button
-          onClick={() => {
+          onClick={async () => {
             setLoading(true);
-            cook(
-              projectState.clips.map(
-                ({ start, end, thumb, overrideRotation }) => ({
-                  start,
-                  end,
-                  thumbnail_name: thumb,
-                  override_rotation: overrideRotation ?? null,
-                })
-              ),
-              parseSize(size),
-              `video-sort-${tag}`
-            )
-              .then(() => {
-                alert(
-                  `Successfully saved to video-sort-${tag}.mp4 in your Downloads folder.`
-                );
-              })
-              .finally(() => setLoading(false));
+            setCookStatus("Getting ready to cook...");
+            try {
+              for await (const status of cook(
+                projectState.clips.map(
+                  ({ start, end, thumb, overrideRotation }) => ({
+                    start,
+                    end,
+                    thumbnail_name: thumb,
+                    override_rotation: overrideRotation ?? null,
+                  })
+                ),
+                parseSize(size),
+                `video-sort-${tag}`
+              )) {
+                setCookStatus(status);
+              }
+              alert(
+                `Successfully saved to video-sort-${tag}.mp4 in your Downloads folder.`
+              );
+            } finally {
+              setLoading(false);
+              setCookStatus("");
+            }
           }}
           className="prepare-btn"
           disabled={
@@ -375,6 +381,10 @@ export function Editor({ state, tag }: EditorProps) {
           Cook! 🧑‍🍳
         </button>
       </div>
+      <pre className={`cook-status ${loading ? "cook-status-visible" : ""}`}>
+        <div className="spinner" />
+        {cookStatus}
+      </pre>
     </div>
   );
 }

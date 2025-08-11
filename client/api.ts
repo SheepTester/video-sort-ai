@@ -121,28 +121,28 @@ export type CookClip = {
 
 export type Size = { width: number; height: number };
 
-export const cook = async (clips: CookClip[], size: Size, name: string) => {
+const decoder = new TextDecoder();
+export const cook = async function* (
+  clips: CookClip[],
+  size: Size,
+  name: string
+): AsyncGenerator<string> {
   const response = await fetch(new URL("/cook", ROOT), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ clips, ...size, name }),
   });
-
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} error: ${await response.text()}`);
   }
 
-  if (response.body) {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      console.log(decoder.decode(value));
+  const reader = response.body?.getReader();
+  while (reader) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
     }
+    yield decoder.decode(value);
   }
 };
 
