@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   cook,
   createPreviewList,
@@ -13,7 +13,7 @@ import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
 import { ProjectState, Clip } from "../types";
 import { useSetState } from "../contexts/state";
-import { formatHms, rotToAngle } from "../util";
+import { formatHms, formatMmSs, rotToAngle } from "../util";
 
 type SizeStr = `${number}x${number}`;
 function parseSize(size: string): Size {
@@ -39,6 +39,8 @@ export function Editor({ state, tag }: EditorProps) {
   const [playing, setPlaying] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement>>({});
   const wakeLockRef = useRef<Promise<WakeLockSentinel>>(null);
+  const [speedUp, setSpeedUp] = useState(false);
+  const pointerId = useRef<number | null>(null);
 
   useEffect(() => {
     if (loading) {
@@ -213,6 +215,14 @@ export function Editor({ state, tag }: EditorProps) {
     };
   }, [playing, viewingClip]);
 
+  const handlePointerEnd = (e: PointerEvent) => {
+    if (pointerId.current === e.pointerId) {
+      if (lastPlayingVideo.current) lastPlayingVideo.current.playbackRate = 1;
+      pointerId.current = null;
+      setSpeedUp(false);
+    }
+  };
+
   return (
     <div className="editor-container">
       {trimmerModal}
@@ -270,6 +280,24 @@ export function Editor({ state, tag }: EditorProps) {
             }}
             step="any"
           />
+          <span className="time-display">
+            {formatMmSs(time)} / {formatMmSs(totalDuration)}
+          </span>
+          <button
+            className={`speed ${speedUp ? "sped-up" : ""}`}
+            onPointerDown={(e) => {
+              if (pointerId.current === null && lastPlayingVideo.current) {
+                lastPlayingVideo.current.playbackRate = 2;
+                pointerId.current = e.pointerId;
+                e.currentTarget.setPointerCapture(e.pointerId);
+                setSpeedUp(true);
+              }
+            }}
+            onPointerUp={handlePointerEnd}
+            onPointerCancel={handlePointerEnd}
+          >
+            &gt;&gt;
+          </button>
         </div>
       </div>
       <div className="timeline">
