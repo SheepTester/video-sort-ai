@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { deleteVideosByTag, renameTag, State } from "../api";
+import { deleteVideosByTag, renameTag, State, Video } from "../api";
 import { useSetState } from "../contexts/state";
-import { extractFilename } from "../util";
+import { extractFilename, formatSize } from "../util";
 
 export type TagSelectProps = {
   state: State;
@@ -10,11 +10,11 @@ export function TagSelect({ state }: TagSelectProps) {
   const setState = useSetState();
 
   const tags = useMemo(() => {
-    const tags: Record<string, number> = {};
+    const tags: Record<string, Video[]> = {};
     for (const video of state.videos) {
       for (const tag of video.tags) {
-        tags[tag] ??= 0;
-        tags[tag]++;
+        tags[tag] ??= [];
+        tags[tag].push(video);
       }
     }
     return Object.entries(tags).sort((a, b) => a[0].localeCompare(b[0]));
@@ -23,22 +23,21 @@ export function TagSelect({ state }: TagSelectProps) {
   return (
     <div className="select-tag">
       <p>
-        Select a tag. <a href="/">Manage</a>
+        Select a tag. <a href="/">Videos</a>
       </p>
-      {tags.map(([tag, count]) => (
+      {tags.map(([tag, videos]) => (
         <div key={tag}>
           <div>
             <a href={"?" + new URLSearchParams({ edit: "", tag })}>{tag}</a>{" "}
-            <span>({count})</span>
+            <span>
+              {videos.length} video{videos.length === 1 ? "" : "s"}
+            </span>
           </div>
           <div>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(
-                  state.videos
-                    .filter((video) => video.tags.includes(tag))
-                    .map((video) => extractFilename(video.path))
-                    .join(" ")
+                  videos.map((video) => extractFilename(video.path)).join(" ")
                 );
               }}
             >
@@ -72,7 +71,7 @@ export function TagSelect({ state }: TagSelectProps) {
               onClick={() => {
                 if (
                   confirm(
-                    `are you sure you want to delete all ${count} videos under ${tag}?`
+                    `are you sure you want to delete all ${videos.length} videos under ${tag}?`
                   )
                 ) {
                   deleteVideosByTag(tag).then(setState);
@@ -82,6 +81,14 @@ export function TagSelect({ state }: TagSelectProps) {
             >
               Delete
             </button>
+            <span className="tag-total-size">
+              {formatSize(
+                videos.reduce(
+                  (cum, curr) => cum + curr.size + (curr.preview3?.size ?? 0),
+                  0
+                )
+              )}
+            </span>
           </div>
         </div>
       ))}

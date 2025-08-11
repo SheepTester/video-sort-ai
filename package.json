@@ -11,8 +11,9 @@
     "react-dom": "^19.1.1"
   },
   "scripts": {
-    "dev": "npm-run-all --parallel serve client:dev",
+    "dev": "npm run client:build && npm-run-all --parallel serve:dev client:dev",
     "serve": "cargo run",
+    "serve:dev": "nodemon",
     "build": "npm run client:build",
     "client:build": "esbuild --bundle client/index.tsx --outdir=src/static/ --define:ROOT='window.location.href' --minify",
     "client:dev": "esbuild --bundle client/index.tsx --outdir=src/static/ --define:ROOT='\"http://localhost:8008/\"' --servedir=src/static/ --sourcemap"

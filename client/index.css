@@ -29,6 +29,10 @@ button:not(:disabled) {
   opacity: 0.5;
 }
 
+a {
+  text-decoration: none;
+}
+
 .navbar {
   display: flex;
   padding: 8px;
@@ -348,6 +352,10 @@ button:not(:disabled) {
   top: 60px;
   height: 40px;
 }
+.grid-view-navbar a {
+  margin-left: auto;
+  align-self: center;
+}
 
 .select-tag {
   display: flex;
@@ -368,9 +376,7 @@ button:not(:disabled) {
 .select-tag > div > div {
   display: flex;
   gap: 10px;
-}
-.select-tag a {
-  text-decoration: none;
+  align-items: center;
 }
 .select-tag span {
   margin-left: auto;
@@ -383,6 +389,9 @@ button:not(:disabled) {
 }
 .select-tag .dangerous {
   background-color: color-mix(in srgb, #ff4757 20%, transparent);
+}
+.tag-total-size {
+  font-size: 0.8em;
 }
 
 .editor-container {
@@ -397,9 +406,6 @@ button:not(:disabled) {
   gap: 10px;
   padding: 10px;
   font-size: 0.8em;
-}
-.editor-container header a {
-  text-decoration: none;
 }
 
 .preview-area {

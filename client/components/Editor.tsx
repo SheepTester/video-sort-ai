@@ -162,7 +162,7 @@ export function Editor({ state, tag }: EditorProps) {
 
   useEffect(() => {
     const video = viewingClip && videoRefs.current[viewingClip.clip.thumb];
-    if (!video) return;
+    if (!video || !viewingClip) return;
 
     const handleTimeUpdate = () => {
       setTime(t + video.currentTime - viewingClip.clip.start);

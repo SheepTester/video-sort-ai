@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, os::unix::ffi::OsStrExt, sync::Arc};
+use std::{ffi::OsStr, io::ErrorKind, os::unix::ffi::OsStrExt, sync::Arc};
 
 use futures_util::TryStreamExt;
 use http_body_util::{BodyExt, Full, StreamBody};
@@ -115,7 +115,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     fs::remove_file(&format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name))
                         .await
                         .or_else(|err| {
-                            if err.kind() == std::io::ErrorKind::NotFound {
+                            if err.kind() == ErrorKind::NotFound {
                                 Ok(())
                             } else {
                                 Err(err)

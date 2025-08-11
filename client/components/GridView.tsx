@@ -21,6 +21,7 @@ export function GridView({ videos }: GridViewProps) {
             {columnOption}
           </button>
         ))}
+        <a href="/?edit">Tags</a>
       </div>
       <div
         className="grid-view"

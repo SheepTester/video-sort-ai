@@ -105,8 +105,8 @@ Video editor user flow:
 - [x] the timings will be saved locally
 - [x] once you're done you can select the dimensions of the video—portrait landscape or square
 - [x] then the backend will construct an ffmpeg filter on the real video files and cook
-- [ ] where will the output videos go?
-- [ ] on the tags page you can also delete by tag or rename tags. it'll also show the total size of the videos and their previews
+- [x] where will the output videos go?
+- [x] on the tags page you can also delete by tag or rename tags. it'll also show the total size of the videos and their previews
 
 ## Development
 
@@ -117,11 +117,7 @@ $ npm install
 # add videos
 $ cargo run -- add /mnt/c/Users/seyen/Videos/Screen\ Recordings/
 
-# develop server (http://localhost:8008/)
-$ npm run client:build
-$ npx nodemon
-
-# develop client (http://127.0.0.1:8080/)
+# develop (server: http://localhost:8008/; client: http://127.0.0.1:8080/)
 $ npm run dev
 ```
 
