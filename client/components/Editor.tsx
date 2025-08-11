@@ -13,7 +13,7 @@ import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
 import { ProjectState, Clip } from "../types";
 import { useSetState } from "../contexts/state";
-import { rotToAngle } from "../util";
+import { formatHms, rotToAngle } from "../util";
 
 type SizeStr = `${number}x${number}`;
 function parseSize(size: string): Size {
@@ -343,6 +343,7 @@ export function Editor({ state, tag }: EditorProps) {
         <button
           onClick={() => {
             setLoading(true);
+            setCookStatus("");
             createPreviewList(tag)
               .then(setState)
               .finally(() => setLoading(false));
@@ -388,14 +389,17 @@ export function Editor({ state, tag }: EditorProps) {
                 parseSize(size),
                 `video-sort-${tag}`
               )) {
-                setCookStatus(status);
+                setCookStatus(
+                  `total=${formatHms(totalDuration)}${status
+                    .trim()
+                    .replace(/\b(?=\w+=)/g, "\n")}`
+                );
               }
               alert(
                 `Successfully saved to video-sort-${tag}.mp4 in your Downloads folder.`
               );
             } finally {
               setLoading(false);
-              setCookStatus("");
             }
           }}
           className="prepare-btn"

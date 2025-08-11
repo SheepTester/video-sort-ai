@@ -25,15 +25,23 @@ export function formatSize(bytes: number): string {
   return `${tb.toFixed(1)} TB`;
 }
 
+const secFmt = new Intl.NumberFormat("en-US", {
+  style: "unit",
+  unit: "second",
+  unitDisplay: "narrow",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 export function formatSeconds(seconds: number): string {
-  const formatter = new Intl.NumberFormat(undefined, {
-    style: "unit",
-    unit: "second",
-    unitDisplay: "narrow",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return formatter.format(seconds);
+  return secFmt.format(seconds);
+}
+
+export function formatHms(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const hours = Math.floor(mins / 60);
+  return `${hours.toString().padStart(2, "0")}:${(mins % 60)
+    .toString()
+    .padStart(2, "0")}:${seconds.toFixed(2).padStart(5, "0")}`;
 }
 
 export const rotToAngle: Record<Rotation, number> = {
