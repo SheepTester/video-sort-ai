@@ -76,8 +76,9 @@ export const getVideoUrl = (video: Video) =>
 export const getThumbnailUrl = (video: Video) =>
   new URL(`/t/${encodeURIComponent(video.thumbnail_name)}`, ROOT);
 
+// using real video for preview now
 export const getPreviewUrl = (video: Video) =>
-  new URL(`/t/${encodeURIComponent(video.thumbnail_name)}.mp4`, ROOT);
+  new URL(`/v/${encodeURIComponent(video.thumbnail_name)}`, ROOT);
 
 const deleteVideos = (request: VideoSelectRequest) =>
   fetch(new URL("/videos", ROOT), {

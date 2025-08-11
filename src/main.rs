@@ -1,5 +1,6 @@
 use std::{
     env::current_exe,
+    error::Error,
     io::ErrorKind,
     net::SocketAddr,
     process::exit,
@@ -45,7 +46,20 @@ async fn start_server(state: SharedState) -> MyResult<()> {
                 )
                 .await
             {
-                eprintln!("Error serving connection: {:?}", err);
+                if !err.is_incomplete_message()
+                    && !err.is_body_write_aborted()
+                    && !err
+                        .source()
+                        .and_then(|e| e.downcast_ref::<std::io::Error>())
+                        .map_or(false, |err| {
+                            matches!(
+                                err.kind(),
+                                ErrorKind::ConnectionReset | ErrorKind::BrokenPipe
+                            )
+                        })
+                {
+                    eprintln!("Error serving connection: {:?}", err);
+                }
             }
         });
     }

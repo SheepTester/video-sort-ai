@@ -9,8 +9,8 @@ use hyper::{
 use serde::Deserialize;
 use serde_json::from_str;
 use tokio::{
-    fs::{self, File, metadata},
-    io::{self, AsyncWriteExt},
+    fs::{self, File},
+    io::{self, AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
     process::Command,
     sync::Semaphore,
 };
@@ -246,50 +246,50 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             Some(r) => Err(format!("Unknown rotation {}", r.0.rotation))?,
                         };
 
-                        let preview_path =
-                            format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name);
-                        let ffmpeg_result = Command::new("ffmpeg")
-                            .arg("-i")
-                            .arg(video.current_loc())
-                            // 144p; -2 means to keep the other dimension even,
-                            // because videos like even resolutions
-                            .arg("-vf")
-                            .arg(
-                                // fix the smaller dimension to 480
-                                if ffprobe_output.streams.0.width < ffprobe_output.streams.0.height
-                                {
-                                    "scale=144:-2"
-                                } else {
-                                    "scale=-2:144"
-                                },
-                            )
-                            // i'd rather it be fast than small
-                            .arg("-preset")
-                            .arg("ultrafast")
-                            // fairly low quality
-                            .arg("-crf")
-                            .arg("32")
-                            // 16k and 32k sound fairly similar
-                            .arg("-b:a")
-                            .arg("16k")
-                            // make video seekable
-                            .arg("-movflags")
-                            .arg("+faststart")
-                            .arg("-y")
-                            // unspecified video and audio codec defaults to
-                            // h264 and aac for mp4
-                            .arg(&preview_path)
-                            .output()
-                            .await?;
-                        if !ffmpeg_result.status.success() {
-                            eprintln!(
-                                "[preview] Failed to create preview for {}.",
-                                video.display_name()
-                            );
-                            io::stderr().write_all(&ffmpeg_result.stderr).await?;
-                            Err("ffmpeg preview error")?;
-                        }
-                        let size = metadata(&preview_path).await?.len();
+                        // let preview_path =
+                        //     format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name);
+                        // let ffmpeg_result = Command::new("ffmpeg")
+                        //     .arg("-i")
+                        //     .arg(video.current_loc())
+                        //     // 144p; -2 means to keep the other dimension even,
+                        //     // because videos like even resolutions
+                        //     .arg("-vf")
+                        //     .arg(
+                        //         // fix the smaller dimension to 480
+                        //         if ffprobe_output.streams.0.width < ffprobe_output.streams.0.height
+                        //         {
+                        //             "scale=144:-2"
+                        //         } else {
+                        //             "scale=-2:144"
+                        //         },
+                        //     )
+                        //     // i'd rather it be fast than small
+                        //     .arg("-preset")
+                        //     .arg("ultrafast")
+                        //     // fairly low quality
+                        //     .arg("-crf")
+                        //     .arg("32")
+                        //     // 16k and 32k sound fairly similar
+                        //     .arg("-b:a")
+                        //     .arg("16k")
+                        //     // make video seekable
+                        //     .arg("-movflags")
+                        //     .arg("+faststart")
+                        //     .arg("-y")
+                        //     // unspecified video and audio codec defaults to
+                        //     // h264 and aac for mp4
+                        //     .arg(&preview_path)
+                        //     .output()
+                        //     .await?;
+                        // if !ffmpeg_result.status.success() {
+                        //     eprintln!(
+                        //         "[preview] Failed to create preview for {}.",
+                        //         video.display_name()
+                        //     );
+                        //     io::stderr().write_all(&ffmpeg_result.stderr).await?;
+                        //     Err("ffmpeg preview error")?;
+                        // }
+                        let size = 0; // metadata(&preview_path).await?.len();
                         eprintln!("[preview] {} ({})", video.display_name(), format_size(size));
 
                         let (original_width, original_height) = if original_rotation.transposed() {
@@ -439,16 +439,53 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     include_str!("../static/404.html").replace("{PATH}", &escape_html(path)),
                 );
             };
-            let file = File::open(file_path).await?;
-            let reader_stream = ReaderStream::new(file);
+            let mut file = File::open(file_path).await?;
+            let size = file.metadata().await?.len();
+            let byte_range = req
+                .headers()
+                .get(hyper::header::RANGE)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|range| range[6..].split_once('-'))
+                .and_then(|(start, end)| {
+                    start.parse::<u64>().ok().map(|start| {
+                        (
+                            start,
+                            end.parse::<u64>().ok().unwrap_or(u64::MAX).min(size - 1),
+                        )
+                    })
+                })
+                .filter(|(start, end)| start < end);
+            if let Some((start, _)) = byte_range {
+                file.seek(std::io::SeekFrom::Start(start)).await?;
+            }
+            let reader_stream =
+                ReaderStream::new(file.take(if let Some((start, end)) = byte_range {
+                    end - start + 1
+                } else {
+                    size
+                }));
             let stream_body = StreamBody::new(reader_stream.map_ok(Frame::data));
             let boxed_body = BodyExt::boxed(stream_body);
-            Ok(Response::builder()
-                .status(StatusCode::OK)
+            let mut response = Response::builder()
+                .status(if byte_range.is_some() {
+                    StatusCode::PARTIAL_CONTENT
+                } else {
+                    StatusCode::OK
+                })
                 .header("Content-Type", "video/mp4")
+                .header("Accept-Ranges", "bytes")
                 .header("Access-Control-Allow-Origin", CORS)
-                .header("Cache-Control", "public, max-age=604800")
-                .body(boxed_body)?)
+                .header(
+                    "Content-Length",
+                    byte_range
+                        .map_or(size, |(start, end)| end - start + 1)
+                        .to_string(),
+                )
+                .header("Cache-Control", "public, max-age=604800");
+            if let Some((start, end)) = byte_range {
+                response = response.header("Content-Range", format!("bytes {start}-{end}/{size}"));
+            }
+            Ok(response.body(boxed_body)?)
         }
         (&Method::GET, path) if path.starts_with("/t/") => {
             let file = File::open(format!(
