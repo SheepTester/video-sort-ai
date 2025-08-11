@@ -104,6 +104,19 @@ export function Editor({ state, tag }: EditorProps) {
     );
   }
 
+  const totalDuration = useMemo(
+    () =>
+      projectState.clips.reduce((cum, curr) => cum + curr.end - curr.start, 0),
+    [projectState.clips]
+  );
+
+  useEffect(() => {
+    if (time >= totalDuration) {
+      setPlaying(false);
+      setTime(totalDuration);
+    }
+  }, [time, totalDuration]);
+
   let t = 0;
   let viewingClip: { offset: number; clip: Clip } | null = null;
   for (const clip of projectState.clips) {
@@ -147,6 +160,26 @@ export function Editor({ state, tag }: EditorProps) {
   }, [videos, projectState]);
   const [size, setSize] = useState<SizeStr>("0x0");
 
+  useEffect(() => {
+    const video = viewingClip && videoRefs.current[viewingClip.clip.thumb];
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      setTime(t + video.currentTime - viewingClip.clip.start);
+    };
+    video.addEventListener("timeupdate", handleTimeUpdate);
+
+    video.currentTime = time - t + viewingClip.clip.start;
+    if (playing) {
+      video.play();
+    } else {
+      video.pause();
+    }
+    return () => {
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+    };
+  }, [playing, viewingClip]);
+
   return (
     <div className="editor-container">
       {trimmerModal}
@@ -180,10 +213,7 @@ export function Editor({ state, tag }: EditorProps) {
           <input
             type="range"
             min={0}
-            max={projectState.clips.reduce(
-              (cum, curr) => cum + curr.end - curr.start,
-              0
-            )}
+            max={totalDuration}
             value={time}
             onChange={(e) => {
               setTime(e.currentTarget.valueAsNumber);
