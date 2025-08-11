@@ -1,7 +1,7 @@
-import { Rotation } from "./api";
+import { Rotation, Video } from "./api";
 
-export function extractFilename(path: string) {
-  return path.split("/").pop() || path;
+export function extractFilename(video: Video) {
+  return video.path.split("/").pop() || video.path;
 }
 
 export function formatSize(bytes: number): string {

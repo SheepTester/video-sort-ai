@@ -56,7 +56,7 @@ export function TagEdit({ video, hideSize }: TagEditProps) {
         onClick={async () => {
           const res = await fetch(getVideoUrl(video));
           const blob = await res.blob();
-          const name = extractFilename(video.path);
+          const name = extractFilename(video);
           const file = new File([blob], name, {
             type: blob.type,
           });

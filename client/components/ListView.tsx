@@ -9,7 +9,7 @@ export function ListView({ videos }: ListViewProps) {
   return (
     <div className="list-view">
       {videos.map((video) => (
-        <ListItem key={video.path} video={video} />
+        <ListItem key={video.thumbnail_name} video={video} />
       ))}
     </div>
   );

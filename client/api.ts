@@ -1,8 +1,10 @@
 declare const ROOT: string;
 
 export type Video = {
-  path: string;
+  /** unique identifier for video */
   thumbnail_name: string;
+  /** only may be used for displaying file name */
+  path: string;
   tags: string[];
   note: string;
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };

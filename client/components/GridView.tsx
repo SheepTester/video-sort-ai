@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getThumbnailUrl, Video } from "../api";
 import { useVideoContext } from "../contexts/video";
+import { extractFilename } from "../util";
 
 type GridViewProps = {
   videos: Video[];
@@ -29,13 +30,13 @@ export function GridView({ videos }: GridViewProps) {
       >
         {videos.map((video) => (
           <button
-            key={video.path}
+            key={video.thumbnail_name}
             className="thumbnail"
             onClick={() => showVideo(video)}
           >
             <img
               src={getThumbnailUrl(video).toString()}
-              alt={video.path}
+              alt={extractFilename(video)}
               loading="lazy"
             />
             <div className="tagdots">

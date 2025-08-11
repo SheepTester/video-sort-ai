@@ -40,7 +40,7 @@ export function TagSelect({ state }: TagSelectProps) {
             <button
               onClick={() => {
                 navigator.clipboard.writeText(
-                  videos.map((video) => extractFilename(video.path)).join(" ")
+                  videos.map((video) => extractFilename(video)).join(" ")
                 );
               }}
             >

@@ -40,10 +40,10 @@ export function Wrapper() {
   }, []);
 
   const [videoOpen, setVideoOpen] = useState(false);
-  const [videoPath, setVideoPath] = useState("");
+  const [videoThumb, setVideoThumb] = useState("");
   const showVideo = useCallback((video: Video) => {
     setVideoOpen(true);
-    setVideoPath(video.path);
+    setVideoThumb(video.thumbnail_name);
   }, []);
 
   if (!state) {
@@ -63,7 +63,10 @@ export function Wrapper() {
         <VideoModal
           open={videoOpen}
           onClose={() => setVideoOpen(false)}
-          video={state.videos.find((video) => video.path === videoPath) ?? null}
+          video={
+            state.videos.find((video) => video.thumbnail_name === videoThumb) ??
+            null
+          }
         />
         {errors.length > 0 && (
           <pre>{errors.map((error) => error.stack).join("\n\n")}</pre>

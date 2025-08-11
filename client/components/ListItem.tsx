@@ -30,7 +30,7 @@ export function ListItem({ video }: ListItemProps) {
   };
 
   const handleCopyFilename = async () => {
-    await navigator.clipboard.writeText(extractFilename(video.path));
+    await navigator.clipboard.writeText(extractFilename(video));
   };
 
   return (
@@ -38,17 +38,17 @@ export function ListItem({ video }: ListItemProps) {
       <button className="list-item-thumbnail" onClick={() => showVideo(video)}>
         <img
           src={getThumbnailUrl(video).toString()}
-          alt={video.path}
+          alt={extractFilename(video)}
           loading="lazy"
         />
       </button>
       <div className="list-item-info">
         <div className="list-item-filename">
           <span>
-            {extractFilename(video.path).replace(".mp4", "") + " "}
+            {extractFilename(video).replace(".mp4", "") + " "}
             <button
               onClick={() => {
-                if (confirm(`delete ${extractFilename(video.path)} fr?`)) {
+                if (confirm(`delete ${extractFilename(video)} fr?`)) {
                   deleteVideo(video).then(setState);
                 }
               }}
