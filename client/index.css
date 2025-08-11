@@ -74,6 +74,11 @@ a {
   width: 0;
   flex: auto;
   object-fit: cover;
+  transition: transform 0.2s, border-radius 0.2s;
+}
+.selected img {
+  transform: scale(0.8) rotate(4deg);
+  border-radius: 10px;
 }
 
 .tagdots {

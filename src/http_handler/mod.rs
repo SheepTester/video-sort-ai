@@ -393,21 +393,20 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
             let success = {
                 let mut state = state.write().await;
-                let video = state
-                    .videos
-                    .iter_mut()
-                    .find(|video| video.thumbnail_name == request.thumbnail_name);
-                let success = video.is_some();
-                if let Some(video) = video {
-                    match path.as_str() {
-                        "/tag/add" => {
-                            video.tags.insert(request.tag_or_note);
+                let mut success = false;
+                for video in &mut state.videos {
+                    if request.target.match_video(video) {
+                        match path.as_str() {
+                            "/tag/add" => {
+                                video.tags.insert(request.tag_or_note.clone());
+                            }
+                            "/tag/remove" => {
+                                video.tags.remove(&request.tag_or_note);
+                            }
+                            "/editnote" => video.note = request.tag_or_note.clone(),
+                            _ => {}
                         }
-                        "/tag/remove" => {
-                            video.tags.remove(&request.tag_or_note);
-                        }
-                        "/editnote" => video.note = request.tag_or_note,
-                        _ => {}
+                        success = true;
                     }
                 }
                 success
@@ -418,8 +417,8 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             } else {
                 build_json_response(&JsonError {
                     error: format!(
-                        "Unable to find video by thumbnail name {}",
-                        request.thumbnail_name
+                        "Unable to find video by thumbnail name {:?}",
+                        request.target
                     ),
                 })
             }

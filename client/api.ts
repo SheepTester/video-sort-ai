@@ -26,13 +26,16 @@ export type State = {
   version: string | null;
 };
 export type VideoMetadataEditReq = {
-  thumbnail_name: string;
+  target: VideoSelectRequest;
   tag_or_note: string;
 };
 export type JsonError = {
   error: string;
 };
-export type VideoSelectRequest = { Thumbnail: string } | { Tag: string };
+export type VideoSelectRequest =
+  | { Thumbnail: string }
+  | { Thumbnails: string[] }
+  | { Tag: string };
 
 const toJson = async <T = State>(r: Response): Promise<T> =>
   r.ok
@@ -52,21 +55,31 @@ const editMetadata = (path: string, req: VideoMetadataEditReq) =>
       "error" in resp ? Promise.reject(new Error(resp.error)) : resp
     );
 
-export const addTag = (video: Video, tag: string) =>
+export const addTag = (
+  video: Video | { thumbnail_name: string }[],
+  tag: string
+) =>
   editMetadata("/tag/add", {
-    thumbnail_name: video.thumbnail_name,
+    target: Array.isArray(video)
+      ? { Thumbnails: video.map((video) => video.thumbnail_name) }
+      : { Thumbnail: video.thumbnail_name },
     tag_or_note: tag,
   });
 
-export const removeTag = (video: Video, tag: string) =>
+export const removeTag = (
+  video: Video | { thumbnail_name: string }[],
+  tag: string
+) =>
   editMetadata("/tag/remove", {
-    thumbnail_name: video.thumbnail_name,
+    target: Array.isArray(video)
+      ? { Thumbnails: video.map((video) => video.thumbnail_name) }
+      : { Thumbnail: video.thumbnail_name },
     tag_or_note: tag,
   });
 
 export const setNote = (video: Video, note: string) =>
   editMetadata("/editnote", {
-    thumbnail_name: video.thumbnail_name,
+    target: { Thumbnail: video.thumbnail_name },
     tag_or_note: note,
   });
 

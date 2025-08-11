@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::common::{Rotation, Video};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct VideoMetadataEditReq {
-    pub thumbnail_name: String,
+    pub target: VideoSelectRequest,
     pub tag_or_note: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct RenameTagRequest {
     pub old: String,
     pub new: String,
@@ -17,6 +17,7 @@ pub struct RenameTagRequest {
 #[derive(Deserialize, Debug)]
 pub enum VideoSelectRequest {
     Thumbnail(String),
+    Thumbnails(Vec<String>),
     Tag(String),
 }
 impl VideoSelectRequest {
@@ -25,22 +26,25 @@ impl VideoSelectRequest {
             VideoSelectRequest::Thumbnail(thumbnail_name) => {
                 video.thumbnail_name == *thumbnail_name
             }
+            VideoSelectRequest::Thumbnails(thumbnail_names) => {
+                thumbnail_names.contains(&video.thumbnail_name)
+            }
             VideoSelectRequest::Tag(tag) => video.tags.contains(tag),
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct JsonError {
     pub error: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct PreparePreviewReq {
     pub tag: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Clip {
     pub start: f64,
     pub end: f64,
@@ -48,7 +52,7 @@ pub struct Clip {
     pub override_rotation: Option<Rotation>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct CookReq {
     pub clips: Vec<Clip>,
     pub width: u32,
