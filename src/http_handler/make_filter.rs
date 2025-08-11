@@ -57,7 +57,7 @@ pub fn make_filter(
         };
         let (original_width, original_height) = match &clip.override_rotation {
             // One of them is unrotated and the other is not, so we need to transpose the size
-            Some(rot) if (rot.transposed()) != (clip.preview.original_rotation.transposed()) => {
+            Some(rot) if rot.transposed() != clip.preview.original_rotation.transposed() => {
                 (clip.preview.original_height, clip.preview.original_width)
             }
             _ => (clip.preview.original_width, clip.preview.original_height),
@@ -69,23 +69,21 @@ pub fn make_filter(
             "[{clip_index}:v] trim = start={} : end={}, setpts=PTS-STARTPTS",
             clip.start, clip.end
         ));
-        let passthrough = if my_aspect_ratio > 1.0 {
-            "landscape"
-        } else {
-            "portrait"
-        };
+        // let passthrough = if my_aspect_ratio > 1.0 {
+        //     "landscape"
+        // } else {
+        //     "portrait"
+        // };
         match clip
             .override_rotation
             .as_ref()
             .unwrap_or(&clip.preview.original_rotation)
         {
             crate::common::Rotation::Unrotated => {}
-            crate::common::Rotation::Neg90 => filters.push_str(&format!(
-                ", transpose = dir=clock : passthrough={passthrough}"
-            )),
-            crate::common::Rotation::Pos90 => filters.push_str(&format!(
-                ", transpose = dir=cclock : passthrough={passthrough}"
-            )),
+            crate::common::Rotation::Neg90 => filters.push_str(&format!(", transpose = dir=clock")),
+            crate::common::Rotation::Pos90 => {
+                filters.push_str(&format!(", transpose = dir=cclock"))
+            }
             crate::common::Rotation::Neg180 => filters.push_str(&format!(", hflip, vflip")),
         }
         if need_bg {

@@ -74,14 +74,16 @@ function Trimmer_({
   };
 
   useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
     const stopPlayback = () => {
-      if (videoRef.current && videoRef.current.currentTime >= clip.end) {
-        videoRef.current.pause();
+      if (video.currentTime >= clip.end) {
+        video.pause();
       }
     };
-    videoRef.current?.addEventListener("timeupdate", stopPlayback);
+    video.addEventListener("timeupdate", stopPlayback);
     return () => {
-      videoRef.current?.removeEventListener("timeupdate", stopPlayback);
+      video.removeEventListener("timeupdate", stopPlayback);
     };
   }, [clip.end]);
 

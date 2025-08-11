@@ -111,11 +111,16 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             };
             if !deleted_videos.is_empty() {
                 for video in &deleted_videos {
-                    if video.preview.is_some() {
-                        // remove preview video
-                        fs::remove_file(&format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name))
-                            .await?;
-                    }
+                    // remove preview video
+                    fs::remove_file(&format!("{DIR_PATH}/thumbs/{}.mp4", video.thumbnail_name))
+                        .await
+                        .or_else(|err| {
+                            if err.kind() == std::io::ErrorKind::NotFound {
+                                Ok(())
+                            } else {
+                                Err(err)
+                            }
+                        })?;
                     fs::remove_file(&format!("{DIR_PATH}/thumbs/{}", video.thumbnail_name)).await?;
                     fs::remove_file(&video.current_loc()).await?;
                     println!("D {:?}", video.display_name());
@@ -253,21 +258,16 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         let size = metadata(&preview_path).await?.len();
                         eprintln!("[preview] {} ({})", video.display_name(), format_size(size));
 
-                        let (original_width, original_height) = match ffprobe_output
-                            .streams
-                            .0
-                            .side_data_list
-                            .as_ref()
-                            .map(|list| list.0.rotation)
-                        {
-                            Some(rot) if rot != 0 => (
+                        let (original_width, original_height) = if original_rotation.transposed() {
+                            (
                                 ffprobe_output.streams.0.height,
                                 ffprobe_output.streams.0.width,
-                            ),
-                            _ => (
+                            )
+                        } else {
+                            (
                                 ffprobe_output.streams.0.width,
                                 ffprobe_output.streams.0.height,
-                            ),
+                            )
                         };
                         {
                             let mut state = state.write().await;
