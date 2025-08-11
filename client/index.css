@@ -361,8 +361,10 @@ a {
   display: flex;
   flex-direction: column;
 }
-.select-tag p {
+.select-tag nav {
   margin: 0;
+  display: flex;
+  gap: 10px;
   border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   padding: 10px;
 }
@@ -378,7 +380,7 @@ a {
   gap: 10px;
   align-items: center;
 }
-.select-tag span {
+.select-tag div span {
   margin-left: auto;
 }
 .select-tag button {
@@ -721,4 +723,18 @@ a {
   to {
     transform: rotate(360deg);
   }
+}
+
+.version {
+  margin-left: auto;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+.app-version {
+  position: fixed;
+  pointer-events: none;
+  bottom: 10px;
+  right: 10px;
+  opacity: 0.5;
+  font-size: 0.8em;
 }

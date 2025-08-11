@@ -214,6 +214,7 @@ export function Editor({ state, tag }: EditorProps) {
       {trimmerModal}
       <header>
         <a href="/?edit">&lt; back</a> {tag}
+        <span className="version">{state.version}</span>
       </header>
       <div className="preview-area">
         <div className="preview-placeholder">

@@ -60,6 +60,7 @@ export function App({ state }: AppProps) {
           <option value={tag} key={tag} />
         ))}
       </datalist>
+      <span className="app-version">{state.version}</span>
     </div>
   );
 }

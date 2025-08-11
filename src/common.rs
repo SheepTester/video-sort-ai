@@ -96,6 +96,7 @@ impl Rotation {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
     pub videos: Vec<Video>,
+    pub version: Option<String>,
 }
 
 pub async fn save_state(state: &State) -> MyResult<()> {

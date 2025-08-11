@@ -22,9 +22,10 @@ export function TagSelect({ state }: TagSelectProps) {
 
   return (
     <div className="select-tag">
-      <p>
-        Select a tag. <a href="/">Videos</a>
-      </p>
+      <nav>
+        Select a tag. <a href="/">Videos</a>{" "}
+        <span className="version">{state.version}</span>
+      </nav>
       {tags.map(([tag, videos]) => (
         <div key={tag}>
           <div>

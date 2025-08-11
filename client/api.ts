@@ -21,6 +21,7 @@ export const isTransposed = (rot: Rotation) =>
   rot === "Neg90" || rot === "Pos90";
 export type State = {
   videos: Video[];
+  version: string | null;
 };
 export type VideoMetadataEditReq = {
   thumbnail_name: string;
