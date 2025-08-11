@@ -58,22 +58,24 @@ struct FfprobeAudio {
     streams: Vec<FfprobeAudioStream>,
 }
 
+static ENTRIES: &str = "stream=pix_fmt,width,height,bit_rate,color_space,color_transfer,color_primaries:format=duration:stream_side_data=rotation";
+
 pub async fn probe_video(path: &PathBuf) -> MyResult<ProbeResult> {
     let ffprobe_result = Command::new("ffprobe")
-                    // only print errors
-                    .arg("-v")
-                    .arg("error")
-                    // select one video stream
-                    .arg("-select_streams")
-                    .arg("v:0")
-                    // only print these fields
-                    .arg("-show_entries")
-                    .arg("stream=pix_fmt,width,height,bit_rate,color_space,color_transfer,color_primaries:format=duration:stream_side_data=rotation")
-                    .arg("-output_format")
-                    .arg("json")
-                    .arg(path)
-                    .output()
-                    .await?;
+        // only print errors
+        .arg("-v")
+        .arg("error")
+        // select one video stream
+        .arg("-select_streams")
+        .arg("v:0")
+        // only print these fields
+        .arg("-show_entries")
+        .arg(ENTRIES)
+        .arg("-output_format")
+        .arg("json")
+        .arg(path)
+        .output()
+        .await?;
     if !ffprobe_result.status.success() {
         Err(format!(
             "ffprobe video error:\n{}",

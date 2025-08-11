@@ -371,7 +371,9 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     Ok(status) => eprintln!("[cook] ffmpeg failed with status: {status}"),
                     Err(err) => eprintln!("[cook] ffmpeg failed to run: {err}"),
                 }
-                // TODO: delete workdir
+                if let Err(err) = fs::remove_dir_all(work_dir).await {
+                    eprintln!("[cook] failed to clean up workspace: {err}")
+                }
             });
 
             let stream = ReceiverStream::new(rx);

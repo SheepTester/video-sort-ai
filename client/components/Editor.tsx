@@ -21,6 +21,7 @@ import { Trimmer } from "./Trimmer";
 import { ProjectState, Clip } from "../types";
 import { useSetState } from "../contexts/state";
 import { formatHms, formatMmSs, rotToAngle } from "../util";
+import { CookModal } from "./CookModal";
 
 type SizeStr = `${number}x${number}`;
 function parseSize(size: string): Size {
@@ -48,6 +49,7 @@ export function Editor({ state, tag }: EditorProps) {
   const wakeLockRef = useRef<Promise<WakeLockSentinel>>(null);
   const [speedUp, setSpeedUp] = useState(false);
   const pointerId = useRef<number | null>(null);
+  const [showCook, setShowCook] = useState(false);
 
   useEffect(() => {
     if (loading) {
@@ -87,6 +89,18 @@ export function Editor({ state, tag }: EditorProps) {
         ),
     [state, tag]
   );
+
+  // auto load probes
+  const needProbe = videos.some((video) => !video.probe);
+  useEffect(() => {
+    if (!loading && needProbe) {
+      setLoading(true);
+      setCookStatus("");
+      createPreviewList(tag)
+        .then(setState)
+        .finally(() => setLoading(false));
+    }
+  }, [needProbe, loading]);
 
   const videoMap = useMemo(
     () =>
@@ -153,39 +167,6 @@ export function Editor({ state, tag }: EditorProps) {
     t += duration;
   }
 
-  const sizes = useMemo(() => {
-    const getSize = (clip: Clip) => {
-      const video = videoMap[clip.thumb];
-      const origRot = video.probe?.rotation ?? "Unrotated";
-      const clipRot = clip.overrideRotation ?? origRot;
-      const { width: original_width = 0, height: original_height = 0 } =
-        video.probe ?? {};
-      return isTransposed(origRot) === isTransposed(clipRot)
-        ? { width: original_width, height: original_height }
-        : { width: original_height, height: original_width };
-    };
-    const maxSize = projectState.clips.reduce(
-      (cum, curr) => {
-        const { width, height } = getSize(curr);
-        return {
-          width: Math.max(cum.width, width),
-          height: Math.max(cum.height, height),
-        };
-      },
-      { width: 0, height: 0 }
-    );
-    return Array.from(
-      new Set<SizeStr>([
-        `${maxSize.width}x${maxSize.height}`,
-        ...projectState.clips.map((clip): SizeStr => {
-          const { width, height } = getSize(clip);
-          return `${width}x${height}`;
-        }),
-      ])
-    );
-  }, [videos, projectState]);
-  const [size, setSize] = useState<SizeStr>("0x0");
-
   const lastPlayingVideo = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const video = viewingClip && videoRefs.current[viewingClip.clip.thumb];
@@ -236,8 +217,43 @@ export function Editor({ state, tag }: EditorProps) {
   return (
     <div className="editor-container">
       {trimmerModal}
+      <CookModal
+        videos={videos}
+        open={showCook}
+        onClose={() => setShowCook(false)}
+        onCook={async (encoding) => {
+          setLoading(true);
+          setCookStatus("Getting ready to cook...");
+          try {
+            for await (const status of cook(
+              projectState.clips.map(
+                ({ start, end, thumb, overrideRotation }) => ({
+                  start,
+                  end,
+                  thumbnail_name: thumb,
+                  override_rotation: overrideRotation ?? null,
+                })
+              ),
+              encoding,
+              `video-sort-${tag}`
+            )) {
+              setCookStatus(
+                `total=${formatHms(totalDuration)}${status
+                  .trim()
+                  .replace(/\b(?=\w+=)/g, "\n")}`
+              );
+            }
+            alert(
+              `Successfully saved to video-sort-${tag}.mp4 in your Downloads folder.`
+            );
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
       <header>
         <a href="/?edit">&lt; back</a> {tag}
+        <button onClick={() => setShowCook(true)}>Cook! 🧑‍🍳</button>
         <span className="version">{state.version}</span>
       </header>
       <div className="preview-area">
@@ -391,79 +407,6 @@ export function Editor({ state, tag }: EditorProps) {
             {!video.probe && <div className="unavail-indicator">⛔</div>}
           </button>
         ))}
-        <button
-          onClick={() => {
-            setLoading(true);
-            setCookStatus("");
-            createPreviewList(tag)
-              .then(setState)
-              .finally(() => setLoading(false));
-          }}
-          className="prepare-btn"
-          disabled={videos.every((video) => video.probe) || loading}
-        >
-          Prepare previews
-        </button>
-        <select
-          value={size}
-          onChange={(e) => {
-            const { width, height } = parseSize(e.currentTarget.value);
-            setSize(`${width}x${height}`);
-          }}
-        >
-          <option value="0x0" disabled>
-            Select a size
-          </option>
-          {...sizes.map((size) => {
-            const { width, height } = parseSize(size);
-            return (
-              <option key={size} value={size}>
-                {width} &times; {height}
-              </option>
-            );
-          })}
-        </select>
-        <button
-          onClick={async () => {
-            setLoading(true);
-            setCookStatus("Getting ready to cook...");
-            try {
-              for await (const status of cook(
-                projectState.clips.map(
-                  ({ start, end, thumb, overrideRotation }) => ({
-                    start,
-                    end,
-                    thumbnail_name: thumb,
-                    override_rotation: overrideRotation ?? null,
-                  })
-                ),
-                {
-                  // TEMP: use first video's codec
-                  ...videos.flatMap((v) => (v.probe ? [v.probe] : []))[0],
-                  ...parseSize(size),
-                },
-                `video-sort-${tag}`
-              )) {
-                setCookStatus(
-                  `total=${formatHms(totalDuration)}${status
-                    .trim()
-                    .replace(/\b(?=\w+=)/g, "\n")}`
-                );
-              }
-              alert(
-                `Successfully saved to video-sort-${tag}.mp4 in your Downloads folder.`
-              );
-            } finally {
-              setLoading(false);
-            }
-          }}
-          className="prepare-btn"
-          disabled={
-            projectState.clips.length === 0 || loading || size === "0x0"
-          }
-        >
-          Cook! 🧑‍🍳
-        </button>
       </div>
       <pre className={`cook-status ${loading ? "cook-status-visible" : ""}`}>
         <div className="spinner" />

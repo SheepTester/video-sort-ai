@@ -91,10 +91,8 @@ function Trimmer_({
       className="modal trimmer-container"
     >
       <form method="dialog" className="trimmer-header">
-        <button onClick={onClose} type="submit">
-          &lt; Back
-        </button>
-        <h3>Trim Clip</h3>
+        <button type="submit">&lt; back</button>
+        <h3>trim clip</h3>
       </form>
       <div
         className={`trimmer-preview ${previewRotAngle ? "has-rot" : ""}`}

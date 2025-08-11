@@ -388,7 +388,8 @@ a {
 .select-tag div span {
   margin-left: auto;
 }
-.select-tag button {
+.select-tag button,
+.editor-container header button {
   padding: 4px 8px;
   font-size: 0.8em;
   background-color: color-mix(in srgb, currentColor 10%, transparent);
@@ -411,7 +412,9 @@ a {
 .editor-container header {
   display: flex;
   gap: 10px;
-  padding: 10px;
+  padding: 0 10px;
+  align-items: center;
+  height: 35px;
   font-size: 0.8em;
 }
 
@@ -485,15 +488,6 @@ a {
   right: 4px;
 }
 
-.prepare-btn {
-  flex: none;
-  align-self: center;
-  background-color: color-mix(in srgb, currentColor 20%, transparent);
-  padding: 4px 0;
-  width: 80px;
-  border-radius: 4px;
-}
-
 .timeline {
   flex: none;
   padding: 8px;
@@ -546,7 +540,8 @@ a {
   padding: 4px0;
 }
 
-.trimmer-container {
+.trimmer-container,
+.cook-container {
   position: absolute;
   top: 0;
   left: 0;
@@ -558,7 +553,8 @@ a {
   flex-direction: column;
 }
 
-.trimmer-header {
+.trimmer-header,
+.cook-header {
   display: flex;
   align-items: center;
   padding: 8px;
