@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::Rotation;
+use crate::common::{Rotation, Video};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VideoMetadataEditReq {
@@ -15,9 +15,19 @@ pub struct RenameTagRequest {
 }
 
 #[derive(Deserialize, Debug)]
-pub enum DeleteRequest {
+pub enum VideoSelectRequest {
     Thumbnail(String),
     Tag(String),
+}
+impl VideoSelectRequest {
+    pub fn match_video(&self, video: &Video) -> bool {
+        match self {
+            VideoSelectRequest::Thumbnail(thumbnail_name) => {
+                video.thumbnail_name == *thumbnail_name
+            }
+            VideoSelectRequest::Tag(tag) => video.tags.contains(tag),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

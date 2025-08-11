@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, io::ErrorKind, os::unix::ffi::OsStrExt, process::Stdio, sync::Arc};
+use std::{io::ErrorKind, process::Stdio, sync::Arc};
 
 use futures_util::TryStreamExt;
 use http_body_util::{BodyExt, Full, StreamBody};
@@ -21,8 +21,8 @@ use crate::{
     fmt::faded,
     http_handler::{
         defs::{
-            CookReq, DeleteRequest, JsonError, PreparePreviewReq, RenameTagRequest,
-            VideoMetadataEditReq,
+            CookReq, JsonError, PreparePreviewReq, RenameTagRequest, VideoMetadataEditReq,
+            VideoSelectRequest,
         },
         make_filter::make_filter,
         util::{
@@ -94,18 +94,52 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     .boxed(),
             )?),
         (&Method::GET, "/list") => build_json_response(&*state.read().await),
+        (&Method::POST, "/for-youtube") => {
+            fs::create_dir_all(format!("./storage/downloads/for-youtube/")).await?;
+            let request: VideoSelectRequest =
+                serde_json::from_reader(req.collect().await?.aggregate().reader())?;
+            {
+                let mut state = state.write().await;
+                for video in &mut state.videos {
+                    if !request.match_video(video) {
+                        continue;
+                    }
+                    video
+                        .move_file(
+                            format!(
+                                "./storage/downloads/for-youtube/yt_{}.mp4",
+                                video.thumbnail_name
+                            )
+                            .into(),
+                        )
+                        .await?;
+                }
+            }
+            build_json_response(&*state.read().await)
+        }
+        (&Method::POST, "/restore") => {
+            let request: VideoSelectRequest =
+                serde_json::from_reader(req.collect().await?.aggregate().reader())?;
+            {
+                let mut state = state.write().await;
+                for video in &mut state.videos {
+                    if !request.match_video(video) {
+                        continue;
+                    }
+                    video.restore_file().await?;
+                }
+            }
+            build_json_response(&*state.read().await)
+        }
         (&Method::DELETE, "/videos") => {
-            let request: DeleteRequest =
+            let request: VideoSelectRequest =
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
             let deleted_videos = {
                 let mut state = state.write().await;
-                let (deleted, remaining) =
-                    state.videos.drain(..).partition(|video| match &request {
-                        DeleteRequest::Thumbnail(thumbnail_name) => {
-                            video.thumbnail_name == *thumbnail_name
-                        }
-                        DeleteRequest::Tag(tag) => video.tags.contains(tag),
-                    });
+                let (deleted, remaining) = state
+                    .videos
+                    .drain(..)
+                    .partition(|video| request.match_video(video));
                 state.videos = remaining;
                 deleted
             };
@@ -391,10 +425,21 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             }
         }
         (&Method::GET, path) if path.starts_with("/v/") => {
-            let file = File::open(OsStr::from_bytes(&urlencoding::decode_binary(
-                &path.as_bytes()[3..],
-            )))
-            .await?;
+            let thumbnail_name = urlencoding::decode(&path[3..])?;
+            let Some(file_path) = ({
+                let state = state.read().await;
+                state
+                    .videos
+                    .iter()
+                    .find(|video| video.thumbnail_name == thumbnail_name)
+                    .map(|video| video.current_loc().clone())
+            }) else {
+                return build_html_response(
+                    StatusCode::NOT_FOUND,
+                    include_str!("../static/404.html").replace("{PATH}", &escape_html(path)),
+                );
+            };
+            let file = File::open(file_path).await?;
             let reader_stream = ReaderStream::new(file);
             let stream_body = StreamBody::new(reader_stream.map_ok(Frame::data));
             let boxed_body = BodyExt::boxed(stream_body);

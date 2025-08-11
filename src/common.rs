@@ -57,10 +57,32 @@ impl Video {
             |name| name.to_string_lossy().to_string(),
         )
     }
+
+    pub async fn move_file(&mut self, new_path: PathBuf) -> MyResult<()> {
+        match self.stow_state {
+            StowState::Original => {
+                fs::rename(&self.path, &new_path).await?;
+                self.stow_state = StowState::Elsewhere(new_path);
+            }
+            StowState::Elsewhere(_) => Err("i'm already elsewhere")?,
+        }
+        Ok(())
+    }
+
+    pub async fn restore_file(&mut self) -> MyResult<()> {
+        match &self.stow_state {
+            StowState::Original => {}
+            StowState::Elsewhere(path) => {
+                fs::rename(path, &self.path).await?;
+            }
+        }
+        self.stow_state = StowState::Original;
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum StowState {
+enum StowState {
     Original,
     Elsewhere(PathBuf),
 }

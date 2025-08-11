@@ -6,7 +6,7 @@ export type Video = {
   tags: string[];
   note: string;
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
-  stowed: boolean;
+  stow_state: "Original" | { Elsewhere: string };
   size: number;
   preview3?: {
     size: number;
@@ -30,15 +30,14 @@ export type VideoMetadataEditReq = {
 export type JsonError = {
   error: string;
 };
-export type DeleteRequest = { Thumbnail: string } | { Tag: string };
+export type VideoSelectRequest = { Thumbnail: string } | { Tag: string };
 
-export const getList = () =>
-  fetch(new URL("/list", ROOT)).then(
-    async (r): Promise<State> =>
-      r.ok
-        ? r.json()
-        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
-  );
+const toJson = async <T = State>(r: Response): Promise<T> =>
+  r.ok
+    ? r.json()
+    : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`));
+
+export const getList = () => fetch(new URL("/list", ROOT)).then(toJson);
 
 const editMetadata = (path: string, req: VideoMetadataEditReq) =>
   fetch(new URL(path, ROOT), {
@@ -46,14 +45,7 @@ const editMetadata = (path: string, req: VideoMetadataEditReq) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify(req),
   })
-    .then(
-      async (r): Promise<State | JsonError> =>
-        r.ok
-          ? r.json()
-          : Promise.reject(
-              new Error(`HTTP ${r.status} error: ${await r.text()}`)
-            )
-    )
+    .then((r) => toJson<State | JsonError>(r))
     .then((resp) =>
       "error" in resp ? Promise.reject(new Error(resp.error)) : resp
     );
@@ -77,7 +69,7 @@ export const setNote = (video: Video, note: string) =>
   });
 
 export const getVideoUrl = (video: Video) =>
-  new URL(`/v/${encodeURIComponent(video.path)}`, ROOT);
+  new URL(`/v/${encodeURIComponent(video.thumbnail_name)}`, ROOT);
 
 export const getThumbnailUrl = (video: Video) =>
   new URL(`/t/${encodeURIComponent(video.thumbnail_name)}`, ROOT);
@@ -85,16 +77,11 @@ export const getThumbnailUrl = (video: Video) =>
 export const getPreviewUrl = (video: Video) =>
   new URL(`/t/${encodeURIComponent(video.thumbnail_name)}.mp4`, ROOT);
 
-const deleteVideos = (request: DeleteRequest) =>
+const deleteVideos = (request: VideoSelectRequest) =>
   fetch(new URL("/videos", ROOT), {
     method: "DELETE",
     body: JSON.stringify(request),
-  }).then(
-    async (r): Promise<State> =>
-      r.ok
-        ? r.json()
-        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
-  );
+  }).then(toJson);
 
 export const deleteVideo = (video: Video) =>
   deleteVideos({ Thumbnail: video.thumbnail_name });
@@ -106,12 +93,7 @@ export const createPreviewList = (tag: string) =>
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ tag }),
-  }).then(
-    async (r): Promise<State> =>
-      r.ok
-        ? r.json()
-        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
-  );
+  }).then(toJson);
 
 export type CookClip = {
   start: number;
@@ -152,9 +134,18 @@ export const renameTag = (oldName: string, newName: string) =>
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ old: oldName, new: newName }),
-  }).then(
-    async (r): Promise<State> =>
-      r.ok
-        ? r.json()
-        : Promise.reject(new Error(`HTTP ${r.status} error: ${await r.text()}`))
-  );
+  }).then(toJson);
+
+export const moveForYouTube = (tag: string) =>
+  fetch(new URL("/for-youtube", ROOT), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ Tag: tag }),
+  }).then(toJson);
+
+export const restoreFiles = (tag: string) =>
+  fetch(new URL("/restore", ROOT), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ Tag: tag }),
+  }).then(toJson);

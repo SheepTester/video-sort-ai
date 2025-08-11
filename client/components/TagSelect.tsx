@@ -1,5 +1,12 @@
 import { useMemo } from "react";
-import { deleteVideosByTag, renameTag, State, Video } from "../api";
+import {
+  deleteVideosByTag,
+  moveForYouTube,
+  renameTag,
+  restoreFiles,
+  State,
+  Video,
+} from "../api";
 import { useSetState } from "../contexts/state";
 import { extractFilename, formatSize } from "../util";
 
@@ -29,12 +36,7 @@ export function TagSelect({ state }: TagSelectProps) {
       {tags.map(([tag, videos]) => (
         <div key={tag}>
           <div>
-            <a href={"?" + new URLSearchParams({ edit: "", tag })}>{tag}</a>{" "}
-            <span>
-              {videos.length} video{videos.length === 1 ? "" : "s"}
-            </span>
-          </div>
-          <div>
+            <a href={"?" + new URLSearchParams({ edit: "", tag })}>{tag}</a>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(
@@ -43,16 +45,6 @@ export function TagSelect({ state }: TagSelectProps) {
               }}
             >
               Copy names
-            </button>
-            <button
-              onClick={() => {
-                const name = prompt(`new name for ${tag}:`);
-                if (name) {
-                  renameTag(tag, name).then(setState);
-                }
-              }}
-            >
-              Rename
             </button>
             <button
               onClick={() => {
@@ -68,6 +60,50 @@ export function TagSelect({ state }: TagSelectProps) {
             >
               Reset
             </button>
+            <span>
+              {videos.length} video{videos.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div>
+            <button
+              onClick={() => {
+                const name = prompt(`new name for ${tag}:`);
+                if (name) {
+                  renameTag(tag, name).then(setState);
+                }
+              }}
+            >
+              Rename
+            </button>
+            {videos.some((video) => video.stow_state !== "Original") ? (
+              <button
+                onClick={() => {
+                  if (
+                    confirm(
+                      `are you sure you want to move all ${tag}'s videos back where they came from?`
+                    )
+                  ) {
+                    restoreFiles(tag).then(setState);
+                  }
+                }}
+              >
+                Restore
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (
+                    confirm(
+                      `are you sure you want to move ${tag}'s videos to the Downloads folder?`
+                    )
+                  ) {
+                    moveForYouTube(tag).then(setState);
+                  }
+                }}
+              >
+                Move
+              </button>
+            )}
             <button
               onClick={() => {
                 if (
