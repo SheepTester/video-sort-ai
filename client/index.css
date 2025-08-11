@@ -76,6 +76,11 @@ a {
   object-fit: cover;
 }
 
+.thumbnail.selected {
+  outline: 2px solid dodgerblue;
+  outline-offset: -2px;
+}
+
 .tagdots {
   display: flex;
   gap: 5px;
