@@ -44,6 +44,15 @@ export function formatHms(seconds: number): string {
     .padStart(2, "0")}:${seconds.toFixed(2).padStart(5, "0")}`;
 }
 
+export function formatMmSs(seconds: number): string {
+  const totalSeconds = Math.floor(seconds);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins.toString().padStart(2, "0")}:${secs
+    .toString()
+    .padStart(2, "0")}`;
+}
+
 export const rotToAngle: Record<Rotation, number> = {
   Unrotated: 0,
   Neg90: -90,
