@@ -121,17 +121,30 @@ export type CookClip = {
 
 export type Size = { width: number; height: number };
 
-export const cook = (clips: CookClip[], size: Size, name: string) =>
-  fetch(new URL("/cook", ROOT), {
+export const cook = async (clips: CookClip[], size: Size, name: string) => {
+  const response = await fetch(new URL("/cook", ROOT), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ clips, ...size, name }),
-  }).then(async (r): Promise<void> => {
-    if (!r.ok)
-      return Promise.reject(
-        new Error(`HTTP ${r.status} error: ${await r.text()}`)
-      );
   });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} error: ${await response.text()}`);
+  }
+
+  if (response.body) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      console.log(decoder.decode(value));
+    }
+  }
+};
 
 export const renameTag = (oldName: string, newName: string) =>
   fetch(new URL("/tag/rename", ROOT), {

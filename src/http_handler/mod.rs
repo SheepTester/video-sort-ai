@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, io::ErrorKind, os::unix::ffi::OsStrExt, sync::Arc};
+use std::{ffi::OsStr, io::ErrorKind, os::unix::ffi::OsStrExt, process::Stdio, sync::Arc};
 
 use futures_util::TryStreamExt;
 use http_body_util::{BodyExt, Full, StreamBody};
@@ -322,17 +322,34 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
 
             eprintln!("{}", faded("[cook] Cooking..."));
             eprintln!("{}", faded(&format!("[cook] {command:?}")));
-            let ffmpeg_result = command.status().await?;
-            if !ffmpeg_result.success() {
-                eprintln!("[cook] ffmpeg failure");
-                Err("ffmpeg failure")?;
-            }
-            eprintln!("[cook] Bon appetit! {out_path}");
+
+            command.stderr(Stdio::piped());
+            let mut child = command.spawn()?;
+            let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
+
+            tokio::spawn(async move {
+                match child.wait().await {
+                    Ok(status) if status.success() => {
+                        eprintln!("[cook] Bon appetit! {out_path}");
+                    }
+                    Ok(status) => {
+                        eprintln!("[cook] ffmpeg failed with status: {status}");
+                    }
+                    Err(err) => {
+                        eprintln!("[cook] ffmpeg failed to run: {err}");
+                    }
+                }
+            });
+
+            let reader_stream = ReaderStream::new(stderr);
+            let stream_body = StreamBody::new(reader_stream.map_ok(Frame::data));
+            let boxed_body = BodyExt::boxed(stream_body);
 
             Ok(Response::builder()
-                .status(StatusCode::NO_CONTENT)
+                .status(StatusCode::OK)
+                .header("Content-Type", "text/plain; charset=utf-8")
                 .header("Access-Control-Allow-Origin", CORS)
-                .body(Full::new(Bytes::new()).map_err(|e| match e {}).boxed())?)
+                .body(boxed_body)?)
         }
         (&Method::OPTIONS, _) => Ok(Response::builder()
             .status(StatusCode::NO_CONTENT)
