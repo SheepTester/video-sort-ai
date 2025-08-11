@@ -98,7 +98,7 @@ pub struct ProbeResult {
     pub color_space: String,
     pub color_transfer: String,
     pub color_primaries: String,
-    pub bit_rate: u32,
+    pub bit_rate: u32, // oops bitrate does not matter
     pub audio: Option<AudioProbeResult>,
 }
 

@@ -1,4 +1,9 @@
-use std::{io::ErrorKind, process::Stdio, sync::Arc};
+use std::{
+    io::ErrorKind,
+    path::PathBuf,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use futures_util::TryStreamExt;
 use http_body_util::{BodyExt, Full, StreamBody};
@@ -9,21 +14,21 @@ use hyper::{
 use serde::Deserialize;
 use tokio::{
     fs::{self, File},
-    io::{AsyncReadExt, AsyncSeekExt},
-    process::Command,
-    sync::Semaphore,
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, BufReader},
+    sync::{Semaphore, mpsc},
 };
+use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, SharedState, save_state},
+    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, ProbeResult, Rotation, SharedState, save_state},
     fmt::faded,
     http_handler::{
         defs::{
             CookReq, JsonError, PreparePreviewReq, RenameTagRequest, VideoMetadataEditReq,
             VideoSelectRequest,
         },
-        make_filter::make_filter,
+        make_filter::make_clip,
         probe::probe_video,
         util::{
             CORS, MyResponse, build_html_response, build_json_response, build_text_response,
@@ -37,6 +42,14 @@ mod defs;
 mod make_filter;
 mod probe;
 mod util;
+
+pub struct CookClip {
+    pub video_path: PathBuf,
+    pub probe: ProbeResult,
+    pub start: f64,
+    pub end: f64,
+    pub override_rotation: Option<Rotation>,
+}
 
 #[derive(Deserialize, Debug)]
 struct FfprobeVideoStream {
@@ -265,33 +278,95 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
         (&Method::POST, "/cook") => {
             let request: CookReq =
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
-            let out_path = format!("./storage/downloads/{}.mp4", request.name);
-            let mut command = Command::new("ffmpeg");
-            // only log errors and stats
-            command.arg("-v").arg("error");
-            command.arg("-stats");
-            {
+
+            let work_dir = format!(
+                "{DIR_PATH}/work/{}/",
+                SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis()
+            );
+            fs::create_dir_all(&work_dir).await?;
+
+            eprintln!(
+                "{}",
+                faded(&format!(
+                    "[cook] Generating {} clips...",
+                    request.clips.len()
+                ))
+            );
+
+            let (tx, rx) = mpsc::channel::<std::io::Result<Bytes>>(100);
+            let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FFMPEG));
+            let clips = {
                 let state = state.read().await;
-                make_filter(&state, &request, &mut command, &out_path)?;
+                request
+                    .clips
+                    .into_iter()
+                    .filter_map(|clip| {
+                        state
+                            .videos
+                            .iter()
+                            .find(|video| video.thumbnail_name == clip.thumbnail_name)
+                            .and_then(|video| {
+                                video.probe.as_ref().map(|probe| CookClip {
+                                    video_path: video.current_loc().to_path_buf(),
+                                    probe: probe.clone(),
+                                    start: clip.start,
+                                    end: clip.end,
+                                    override_rotation: clip.override_rotation.clone(),
+                                })
+                            })
+                    })
+                    .collect::<Vec<_>>()
+            };
+            let temp_base_encode = clips.get(0).ok_or("no clips")?.probe.clone();
+            for (i, handle) in clips
+                .into_iter()
+                .enumerate()
+                .map(|(i, clip)| {
+                    let semaphore = semaphore.clone();
+                    let tx = tx.clone();
+                    let temp_base_encode = temp_base_encode.clone();
+                    let work_dir = work_dir.clone();
+                    tokio::spawn(async move {
+                        let _permit = semaphore.acquire_owned().await?;
+                        let mut command = make_clip(
+                            &clip,
+                            request.width,
+                            request.height,
+                            &temp_base_encode,
+                            &format!("{work_dir}/clip_{i}.mp4"),
+                        )?;
+                        let mut child = command.spawn()?;
+                        let mut reader =
+                            BufReader::new(child.stdout.take().ok_or("no stdout??")?).split(b'\r');
+                        while let Some(line) = reader.next_segment().await.transpose() {
+                            tx.send(line.map(|line| {
+                                Bytes::from(format!("[{i}] {}\n", String::from_utf8_lossy(&line)))
+                            }))
+                            .await?;
+                        }
+                        Ok::<(), BoxedError>(())
+                    })
+                })
+                .enumerate()
+            {
+                match handle.await {
+                    Err(err) => {
+                        eprintln!("[cook] Unexpected join error in clip {i}:\n{err:?}");
+                    }
+                    Ok(Err(err)) => {
+                        eprintln!("[cook] Unexpected error in clip {i}:\n{err:?}");
+                    }
+                    Ok(Ok(_)) => {}
+                }
             }
 
-            eprintln!("{}", faded("[cook] Cooking..."));
-            eprintln!("{}", faded(&format!("[cook] {command:?}")));
+            let out_path = format!("./storage/downloads/{}.mp4", request.name);
 
-            command.stderr(Stdio::piped());
-            let mut child = command.spawn()?;
-            let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
-
-            tokio::spawn(async move {
-                match child.wait().await {
-                    Ok(status) if status.success() => eprintln!("[cook] Bon appetit! {out_path}"),
-                    Ok(status) => eprintln!("[cook] ffmpeg failed with status: {status}"),
-                    Err(err) => eprintln!("[cook] ffmpeg failed to run: {err}"),
-                }
-            });
-
-            let reader_stream = ReaderStream::new(stderr);
-            let stream_body = StreamBody::new(reader_stream.map_ok(Frame::data));
+            // close the original tx since it's like referenced counted or
+            // whatever
+            drop(tx);
+            let stream = ReceiverStream::new(rx);
+            let stream_body = StreamBody::new(stream.map_ok(Frame::data));
             let boxed_body = BodyExt::boxed(stream_body);
 
             Ok(Response::builder()
