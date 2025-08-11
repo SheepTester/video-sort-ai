@@ -139,6 +139,9 @@ pub fn make_clip(
     }
     // set rotation to 0 (termux ffmpeg seems to copy it)
     command.arg("-metadata:s:v").arg("rotate=0");
+    // 1/90000 time scale, for consistent time base before concat. vfr
+    // timestamps are defined in terms of this
+    command.arg("-video_track_timescale").arg("90000");
     // make video concattable
     command.arg("-fflags").arg("+genpts");
     // should be fine if we overwrite whatever's there. just in case, so it
