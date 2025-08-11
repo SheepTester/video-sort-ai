@@ -285,7 +285,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             request.width,
                             request.height,
                             &temp_base_encode,
-                            &format!("{work_dir}/clip_{i}.mp4"),
+                            &format!("{work_dir}/clip{i}.mp4"),
                         )?;
                         eprintln!("{}", faded(&format!("[cook.{i}] {command:?}")));
                         command.stderr(Stdio::piped());
@@ -313,8 +313,10 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             let concat_path = format!("{work_dir}/concat.txt");
             fs::write(
                 &concat_path,
+                // note: without -safe 0, ffmpeg concat will reject file paths
+                // with a . in it
                 (0..clip_count)
-                    .map(|i| format!("file '{work_dir}/clip_{i}.mp4'\n"))
+                    .map(|i| format!("file 'clip{i}.mp4'\n"))
                     .collect::<String>(),
             )
             .await?;
@@ -325,6 +327,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             command.arg("-f").arg("concat");
             command.arg("-i").arg(&concat_path);
             command.arg("-c").arg("copy");
+            command.arg("-y");
             command.arg(&out_path);
             command.stderr(Stdio::piped());
 
