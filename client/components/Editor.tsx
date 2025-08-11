@@ -36,6 +36,20 @@ export function Editor({ state, tag }: EditorProps) {
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement>>({});
+  const wakeLockRef = useRef<Promise<WakeLockSentinel>>(null);
+
+  useEffect(() => {
+    if (loading) {
+      if (!wakeLockRef.current) {
+        wakeLockRef.current = navigator.wakeLock.request("screen");
+      }
+    } else if (wakeLockRef.current) {
+      wakeLockRef.current.then((wakeLock) => {
+        if (!wakeLock.released) return wakeLock.release();
+      });
+      wakeLockRef.current = null;
+    }
+  }, [loading]);
 
   useEffect(() => {
     const project = localStorage.getItem(`video-sort/project/${tag}`);
