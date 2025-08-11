@@ -165,17 +165,22 @@ export function Editor({ state, tag }: EditorProps) {
     if (!video || !viewingClip) return;
 
     const handleTimeUpdate = () => {
+      if (video.paused) return;
       setTime(t + video.currentTime - viewingClip.clip.start);
     };
     video.addEventListener("timeupdate", handleTimeUpdate);
 
-    video.currentTime = time - t + viewingClip.clip.start;
+    const targetTime = time - t + viewingClip.clip.start;
+    if (Math.abs(video.currentTime - targetTime) > 0.2) {
+      video.currentTime = targetTime;
+    }
     if (playing) {
       video.play();
     } else {
       video.pause();
     }
     return () => {
+      video.pause();
       video.removeEventListener("timeupdate", handleTimeUpdate);
     };
   }, [playing, viewingClip]);
