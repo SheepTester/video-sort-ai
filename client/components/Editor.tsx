@@ -90,12 +90,12 @@ export function Editor({ state, tag }: EditorProps) {
     }));
   }, []);
   const handleClose = useCallback(() => setTrimmingClip(null), []);
-  if (clip && videoMap[clip.thumb].preview2) {
+  if (clip && videoMap[clip.thumb].preview3) {
     trimmerModal = (
       <Trimmer
         clip={clip}
         video={videoMap[clip.thumb]}
-        duration={videoMap[clip.thumb].preview2?.original_duration ?? 0}
+        duration={videoMap[clip.thumb].preview3?.original_duration ?? 0}
         otherClips={otherClips}
         onUpdate={handleUpdate}
         open={trimmingClip !== null}
@@ -118,10 +118,9 @@ export function Editor({ state, tag }: EditorProps) {
   const sizes = useMemo(() => {
     const getSize = (clip: Clip) => {
       const video = videoMap[clip.thumb];
-      const origRot = video.preview2?.original_rotation ?? "Unrotated";
+      const origRot = video.preview3?.original_rotation ?? "Unrotated";
       const clipRot = clip.overrideRotation ?? origRot;
-      const { original_width = 0, original_height = 0 } = video.preview2 ?? {};
-      // transposed
+      const { original_width = 0, original_height = 0 } = video.preview3 ?? {};
       return isTransposed(origRot) === isTransposed(clipRot)
         ? { width: original_width, height: original_height }
         : { width: original_height, height: original_width };
@@ -241,8 +240,8 @@ export function Editor({ state, tag }: EditorProps) {
             key={video.thumbnail_name}
             className="palette-item"
             onClick={() => {
-              if (video.preview2) {
-                const duration = video.preview2.original_duration;
+              if (video.preview3) {
+                const duration = video.preview3.original_duration;
                 setProjectState((p) => ({
                   ...p,
                   clips: [
@@ -257,13 +256,13 @@ export function Editor({ state, tag }: EditorProps) {
                 }));
               }
             }}
-            disabled={!video.preview2}
+            disabled={!video.preview3}
           >
             <img src={getThumbnailUrl(video).toString()} />
             {projectState.clips.some(
               (c) => c.thumb === video.thumbnail_name
             ) && <div className="used-indicator">✅</div>}
-            {!video.preview2 && <div className="unavail-indicator">⛔</div>}
+            {!video.preview3 && <div className="unavail-indicator">⛔</div>}
           </button>
         ))}
         <button
@@ -274,7 +273,7 @@ export function Editor({ state, tag }: EditorProps) {
               .finally(() => setLoading(false));
           }}
           className="prepare-btn"
-          disabled={videos.every((video) => video.preview2) || loading}
+          disabled={videos.every((video) => video.preview3) || loading}
         >
           Prepare previews
         </button>

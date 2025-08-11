@@ -19,7 +19,7 @@ pub struct Video {
     pub note: String,
     pub mtime: SystemTime,
     pub size: u64,
-    #[serde(rename = "preview2")]
+    #[serde(rename = "preview3")]
     pub preview: Option<Preview>,
     /// currently unused, but will be used for stowing videos in Termux to avoid
     /// persecution by Google Photos, or for making it easier to find a

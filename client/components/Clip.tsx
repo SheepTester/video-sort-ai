@@ -12,7 +12,7 @@ type ClipProps = {
 
 export function Clip({ ends, clip, video, onClick, onMove }: ClipProps) {
   const rot =
-    clip.overrideRotation ?? video.preview2?.original_rotation ?? "Unrotated";
+    clip.overrideRotation ?? video.preview3?.original_rotation ?? "Unrotated";
   return (
     <div className="clip-item">
       <div
@@ -28,7 +28,7 @@ export function Clip({ ends, clip, video, onClick, onMove }: ClipProps) {
             : ""
         }
         data-dur={
-          clip.start === 0 && clip.end === video.preview2?.original_duration
+          clip.start === 0 && clip.end === video.preview3?.original_duration
             ? "Full"
             : formatSeconds(clip.end - clip.start)
         }

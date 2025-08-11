@@ -1,5 +1,3 @@
-import { Clip } from "./types";
-
 declare const ROOT: string;
 
 export type Video = {
@@ -10,7 +8,7 @@ export type Video = {
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
   stowed: boolean;
   size: number;
-  preview2?: {
+  preview3?: {
     size: number;
     original_width: number;
     original_height: number;
