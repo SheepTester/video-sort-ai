@@ -182,10 +182,11 @@ export function Editor({ state, tag }: EditorProps) {
     if (!video || !viewingClip) return;
 
     const handleTimeUpdate = () => {
-      if (video.paused) return;
+      if (lastPlayingVideo.current !== video) return;
       setTime(t + video.currentTime - viewingClip.clip.start);
     };
     video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("ended", handleTimeUpdate);
 
     const targetTime = time - t + viewingClip.clip.start;
     if (Math.abs(video.currentTime - targetTime) > 0.2) {
@@ -193,6 +194,7 @@ export function Editor({ state, tag }: EditorProps) {
     }
     if (lastPlayingVideo.current && lastPlayingVideo.current !== video) {
       lastPlayingVideo.current.pause();
+      console.log("pause old");
     }
     lastPlayingVideo.current = video;
     if (playing) {
@@ -202,10 +204,12 @@ export function Editor({ state, tag }: EditorProps) {
     } else {
       if (!video.paused) {
         video.pause();
+        console.log("pause because pause");
       }
     }
     return () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("ended", handleTimeUpdate);
     };
   }, [playing, viewingClip]);
 
