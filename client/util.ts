@@ -1,3 +1,5 @@
+import { Rotation } from "./api";
+
 export function extractFilename(path: string) {
   return path.split("/").pop() || path;
 }
@@ -33,3 +35,10 @@ export function formatSeconds(seconds: number): string {
   });
   return formatter.format(seconds);
 }
+
+export const rotToAngle: Record<Rotation, number> = {
+  Unrotated: 0,
+  Neg90: -90,
+  Pos90: 90,
+  Neg180: 180,
+};

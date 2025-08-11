@@ -13,6 +13,7 @@ import { Clip as ClipComponent } from "./Clip";
 import { Trimmer } from "./Trimmer";
 import { ProjectState, Clip } from "../types";
 import { useSetState } from "../contexts/state";
+import { rotToAngle } from "../util";
 
 type SizeStr = `${number}x${number}`;
 function parseSize(size: string): Size {
@@ -175,6 +176,7 @@ export function Editor({ state, tag }: EditorProps) {
   }, [videos, projectState]);
   const [size, setSize] = useState<SizeStr>("0x0");
 
+  const lastPlayingVideo = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const video = viewingClip && videoRefs.current[viewingClip.clip.thumb];
     if (!video || !viewingClip) return;
@@ -189,13 +191,20 @@ export function Editor({ state, tag }: EditorProps) {
     if (Math.abs(video.currentTime - targetTime) > 0.2) {
       video.currentTime = targetTime;
     }
+    if (lastPlayingVideo.current && lastPlayingVideo.current !== video) {
+      lastPlayingVideo.current.pause();
+    }
+    lastPlayingVideo.current = video;
     if (playing) {
-      video.play();
+      if (video.paused) {
+        video.play();
+      }
     } else {
-      video.pause();
+      if (!video.paused) {
+        video.pause();
+      }
     }
     return () => {
-      video.pause();
       video.removeEventListener("timeupdate", handleTimeUpdate);
     };
   }, [playing, viewingClip]);
@@ -208,23 +217,38 @@ export function Editor({ state, tag }: EditorProps) {
       </header>
       <div className="preview-area">
         <div className="preview-placeholder">
-          {videos.map((video) => (
-            <video
-              preload="none"
-              src={getPreviewUrl(video).toString()}
-              poster={getThumbnailUrl(video).toString()}
-              key={video.thumbnail_name}
-              ref={(elem) => {
-                if (elem) videoRefs.current[video.thumbnail_name] = elem;
-              }}
-              style={{
-                visibility:
-                  viewingClip?.clip.thumb === video.thumbnail_name
-                    ? "visible"
-                    : "hidden",
-              }}
-            />
-          ))}
+          {videos.map((video) => {
+            let rotate = 0;
+            if (viewingClip?.clip.thumb === video.thumbnail_name) {
+              const origRot = video.preview3?.original_rotation ?? "Unrotated";
+              const clipRot = viewingClip.clip.overrideRotation ?? origRot;
+              rotate = rotToAngle[origRot] - rotToAngle[clipRot];
+            }
+            return (
+              <video
+                preload="none"
+                src={getPreviewUrl(video).toString()}
+                poster={getThumbnailUrl(video).toString()}
+                key={video.thumbnail_name}
+                ref={(elem) => {
+                  if (elem) videoRefs.current[video.thumbnail_name] = elem;
+                }}
+                style={{
+                  visibility:
+                    viewingClip?.clip.thumb === video.thumbnail_name
+                      ? "visible"
+                      : "hidden",
+                  ...(rotate !== 0
+                    ? {
+                        transform: `rotate(${rotate}deg)`,
+                        height: "auto",
+                        aspectRatio: "1 / 1",
+                      }
+                    : {}),
+                }}
+              />
+            );
+          })}
         </div>
         <div className="vidcontrols">
           <button onClick={() => setPlaying((p) => !p)}>

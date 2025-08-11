@@ -2,7 +2,7 @@ import { CSSProperties, memo, useEffect, useRef } from "react";
 import { Rotation, Video } from "../api";
 import { Clip } from "../types";
 import { RangeSlider } from "./RangeSlider";
-import { formatSeconds } from "../util";
+import { formatSeconds, rotToAngle } from "../util";
 import { Video as VideoComp } from "./Video";
 
 type TrimmerProps = {
@@ -13,13 +13,6 @@ type TrimmerProps = {
   onUpdate: (newClip: Clip) => void;
   open: boolean;
   onClose: () => void;
-};
-
-const rotToAngle: Record<Rotation, number> = {
-  Unrotated: 0,
-  Neg90: -90,
-  Pos90: 90,
-  Neg180: 180,
 };
 
 function Trimmer_({
