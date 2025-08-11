@@ -444,6 +444,9 @@ a {
   width: 0;
   flex: auto;
 }
+.time-display {
+  font-size: 0.8em;
+}
 
 .palette {
   flex: none;

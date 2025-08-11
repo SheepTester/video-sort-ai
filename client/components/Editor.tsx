@@ -1,4 +1,11 @@
-import { PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  PointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   cook,
   createPreviewList,
@@ -218,7 +225,9 @@ export function Editor({ state, tag }: EditorProps) {
 
   const handlePointerEnd = (e: PointerEvent) => {
     if (pointerId.current === e.pointerId) {
-      if (lastPlayingVideo.current) lastPlayingVideo.current.playbackRate = 1;
+      Object.values(videoRefs.current).forEach(
+        (video) => (video.playbackRate = 1)
+      );
       pointerId.current = null;
       setSpeedUp(false);
     }
@@ -267,7 +276,14 @@ export function Editor({ state, tag }: EditorProps) {
           })}
         </div>
         <div className="vidcontrols">
-          <button onClick={() => setPlaying((p) => !p)}>
+          <button
+            onClick={() => {
+              setPlaying(!playing);
+              if (!playing && time >= totalDuration) {
+                setTime(0);
+              }
+            }}
+          >
             {playing ? "⏸️" : "▶️"}
           </button>
           <input
@@ -288,7 +304,9 @@ export function Editor({ state, tag }: EditorProps) {
             className={`speed ${speedUp ? "sped-up" : ""}`}
             onPointerDown={(e) => {
               if (pointerId.current === null && lastPlayingVideo.current) {
-                lastPlayingVideo.current.playbackRate = 2;
+                Object.values(videoRefs.current).forEach(
+                  (video) => (video.playbackRate = 2)
+                );
                 pointerId.current = e.pointerId;
                 e.currentTarget.setPointerCapture(e.pointerId);
                 setSpeedUp(true);
@@ -419,7 +437,11 @@ export function Editor({ state, tag }: EditorProps) {
                     override_rotation: overrideRotation ?? null,
                   })
                 ),
-                parseSize(size),
+                {
+                  // TEMP: use first video's codec
+                  ...videos.flatMap((v) => (v.probe ? [v.probe] : []))[0],
+                  ...parseSize(size),
+                },
                 `video-sort-${tag}`
               )) {
                 setCookStatus(

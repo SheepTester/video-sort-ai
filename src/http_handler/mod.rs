@@ -269,24 +269,18 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     .collect::<Vec<_>>()
             };
             let clip_count = clips.len();
-            let temp_base_encode = clips.get(0).ok_or("no clips")?.probe.clone();
             let handles = clips
                 .into_iter()
                 .enumerate()
                 .map(|(i, clip)| {
                     let semaphore = semaphore.clone();
                     let tx = tx.clone();
-                    let temp_base_encode = temp_base_encode.clone();
                     let work_dir = work_dir.clone();
+                    let encoding = request.encoding.clone();
                     tokio::spawn(async move {
                         let _permit = semaphore.acquire_owned().await?;
-                        let mut command = make_clip(
-                            &clip,
-                            request.width,
-                            request.height,
-                            &temp_base_encode,
-                            &format!("{work_dir}/clip{i}.mp4"),
-                        )?;
+                        let mut command =
+                            make_clip(&clip, &encoding, &format!("{work_dir}/clip{i}.mp4"))?;
                         eprintln!("{}", faded(&format!("[cook.{i}] {command:?}")));
                         command.stderr(Stdio::piped());
                         let mut child = command.spawn()?;

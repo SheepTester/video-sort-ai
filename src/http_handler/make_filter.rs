@@ -4,8 +4,6 @@ use crate::{common::ProbeResult, http_handler::CookClip, util::MyResult};
 
 pub fn make_clip(
     clip: &CookClip,
-    width: u32,
-    height: u32,
     base_encode: &ProbeResult,
     output_path: &str,
 ) -> MyResult<Command> {
@@ -36,7 +34,8 @@ pub fn make_clip(
         }
     }
 
-    let aspect_ratio = width as f64 / height as f64;
+    let ProbeResult { width, height, .. } = base_encode;
+    let aspect_ratio = *width as f64 / *height as f64;
     let (original_width, original_height) = match &clip.override_rotation {
         // One of them is unrotated and the other is not, so we need to transpose the size
         Some(rot) if rot.transposed() != clip.probe.rotation.transposed() => {
@@ -103,7 +102,7 @@ pub fn make_clip(
         filters.push_str(&format!(
             "overlay = (main_w-overlay_w)/2:(main_h-overlay_h)/2 [outv]; "
         ));
-    } else if original_width != width || original_height != height {
+    } else if original_width != *width || original_height != *height {
         // aspect ratio is the same, just need to scale up/down
         filters.push_str(&format!(", scale = {width}:{height}, setsar = 1 [outv]"));
     } else {

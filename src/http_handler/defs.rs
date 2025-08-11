@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::{Rotation, Video};
+use crate::common::{ProbeResult, Rotation, Video};
 
 #[derive(Deserialize, Debug)]
 pub struct VideoMetadataEditReq {
@@ -55,7 +55,6 @@ pub struct Clip {
 #[derive(Deserialize, Debug)]
 pub struct CookReq {
     pub clips: Vec<Clip>,
-    pub width: u32,
-    pub height: u32,
+    pub encoding: ProbeResult,
     pub name: String,
 }

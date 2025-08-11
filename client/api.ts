@@ -10,23 +10,24 @@ export type Video = {
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
   stow_state: "Original" | { Elsewhere: string };
   size: number;
-  probe?: {
-    width: number;
-    height: number;
-    rotation: Rotation;
-    duration: number;
-    pix_fmt: string;
-    color_space: string | null;
-    color_transfer: string | null;
-    color_primaries: string | null;
+  probe?: Probe | null;
+};
+export type Probe = {
+  width: number;
+  height: number;
+  rotation: Rotation;
+  duration: number;
+  pix_fmt: string;
+  color_space: string | null;
+  color_transfer: string | null;
+  color_primaries: string | null;
+  bit_rate: number;
+  audio?: {
+    sample_rate: number;
     bit_rate: number;
-    audio?: {
-      sample_rate: number;
-      bit_rate: number;
-      channels: number;
-      channel_layout: string;
-    };
-  } | null;
+    channels: number;
+    channel_layout: string;
+  };
 };
 export type Rotation = "Unrotated" | "Neg90" | "Pos90" | "Neg180";
 export const isTransposed = (rot: Rotation) =>
@@ -133,13 +134,13 @@ export type Size = { width: number; height: number };
 const decoder = new TextDecoder();
 export const cook = async function* (
   clips: CookClip[],
-  size: Size,
+  encoding: Probe,
   name: string
 ): AsyncGenerator<string> {
   const response = await fetch(new URL("/cook", ROOT), {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ clips, ...size, name }),
+    body: JSON.stringify({ clips, encoding, name }),
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} error: ${await response.text()}`);
