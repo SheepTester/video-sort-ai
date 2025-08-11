@@ -95,9 +95,9 @@ pub struct ProbeResult {
     // stuff to match stream settings (excl codec, which I am forcing to be
     // h264)
     pub pix_fmt: String,
-    pub color_space: String,
-    pub color_transfer: String,
-    pub color_primaries: String,
+    pub color_space: Option<String>,
+    pub color_transfer: Option<String>,
+    pub color_primaries: Option<String>,
     pub bit_rate: u32, // oops bitrate does not matter
     pub audio: Option<AudioProbeResult>,
 }

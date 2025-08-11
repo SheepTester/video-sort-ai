@@ -16,9 +16,9 @@ export type Video = {
     rotation: Rotation;
     duration: number;
     pix_fmt: string;
-    color_space: string;
-    color_transfer: string;
-    color_primaries: string;
+    color_space: string | null;
+    color_transfer: string | null;
+    color_primaries: string | null;
     bit_rate: number;
     audio?: {
       sample_rate: number;

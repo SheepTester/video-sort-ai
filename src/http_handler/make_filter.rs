@@ -22,7 +22,7 @@ pub fn make_clip(
     if let Some(audio) = &base_encode.audio {
         if clip.probe.audio.is_some() {
             filters.push_str(&format!(
-                "[0:a] atrim = start={} : end={}, asetpts=PTS-STARTPTS [a_trimmed]; ",
+                "[0:a] atrim = start={} : end={}, asetpts=PTS-STARTPTS [outa]; ",
                 clip.start, clip.end
             ));
         } else {
@@ -32,7 +32,7 @@ pub fn make_clip(
                 audio.channel_layout,
                 clip.end - clip.start
             ));
-            filters.push_str(", asetpts=PTS-STARTPTS [a_trimmed]; ");
+            filters.push_str(", asetpts=PTS-STARTPTS [outa]; ");
         }
     }
 
@@ -123,9 +123,13 @@ pub fn make_clip(
     command.arg("-pix_fmt").arg(&base_encode.pix_fmt);
     command
         .arg("-color_primaries")
-        .arg(&base_encode.color_primaries);
-    command.arg("-color_trc").arg(&base_encode.color_transfer);
-    command.arg("-colorspace").arg(&base_encode.color_space);
+        .arg(base_encode.color_primaries.as_ref().map_or("bt709", |v| v));
+    command
+        .arg("-color_trc")
+        .arg(base_encode.color_transfer.as_ref().map_or("bt709", |v| v));
+    command
+        .arg("-colorspace")
+        .arg(base_encode.color_space.as_ref().map_or("bt709", |v| v));
     command.arg("-fps_mode").arg("vfr"); // force variable frame rate
     if let Some(audio) = &base_encode.audio {
         command.arg("-c:a").arg("aac"); // force aac

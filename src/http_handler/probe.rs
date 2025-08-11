@@ -1,13 +1,62 @@
 use std::path::PathBuf;
 
+use serde::Deserialize;
 use serde_json::from_str;
 use tokio::process::Command;
 
 use crate::{
-    common::{AudioProbeResult, ProbeResult},
-    http_handler::{FfprobeAudio, FfprobeVideo, FfprobeVideoStreamSideData},
+    common::{AudioProbeResult, ProbeResult, Rotation},
     util::MyResult,
 };
+
+pub struct CookClip {
+    pub video_path: PathBuf,
+    pub probe: ProbeResult,
+    pub start: f64,
+    pub end: f64,
+    pub override_rotation: Option<Rotation>,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeVideoStream {
+    width: u32,
+    height: u32,
+    pix_fmt: String,
+    color_space: Option<String>,
+    color_transfer: Option<String>,
+    color_primaries: Option<String>,
+    bit_rate: String,
+    side_data_list: Option<(FfprobeVideoStreamSideData,)>,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeVideoStreamSideData {
+    rotation: i32,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeOutputFormat {
+    duration: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeVideo {
+    streams: (FfprobeVideoStream,),
+    format: FfprobeOutputFormat,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeAudioStream {
+    sample_rate: String,
+    channels: u32,
+    channel_layout: String,
+    bit_rate: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct FfprobeAudio {
+    streams: Vec<FfprobeAudioStream>,
+}
 
 pub async fn probe_video(path: &PathBuf) -> MyResult<ProbeResult> {
     let ffprobe_result = Command::new("ffprobe")

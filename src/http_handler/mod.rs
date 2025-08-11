@@ -1,6 +1,5 @@
 use std::{
     io::ErrorKind,
-    path::PathBuf,
     process::Stdio,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
@@ -12,7 +11,6 @@ use hyper::{
     Method, Request, Response, StatusCode,
     body::{Buf, Bytes, Frame},
 };
-use serde::Deserialize;
 use tokio::{
     fs::{self, File},
     io::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, BufReader},
@@ -23,7 +21,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::io::ReaderStream;
 
 use crate::{
-    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, ProbeResult, Rotation, SharedState, save_state},
+    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, SharedState, save_state},
     fmt::faded,
     http_handler::{
         defs::{
@@ -31,7 +29,7 @@ use crate::{
             VideoSelectRequest,
         },
         make_filter::make_clip,
-        probe::probe_video,
+        probe::{CookClip, probe_video},
         util::{
             CORS, MyResponse, build_html_response, build_json_response, build_text_response,
             escape_html,
@@ -44,55 +42,6 @@ mod defs;
 mod make_filter;
 mod probe;
 mod util;
-
-pub struct CookClip {
-    pub video_path: PathBuf,
-    pub probe: ProbeResult,
-    pub start: f64,
-    pub end: f64,
-    pub override_rotation: Option<Rotation>,
-}
-
-#[derive(Deserialize, Debug)]
-struct FfprobeVideoStream {
-    width: u32,
-    height: u32,
-    pix_fmt: String,
-    color_space: String,
-    color_transfer: String,
-    color_primaries: String,
-    bit_rate: String,
-    side_data_list: Option<(FfprobeVideoStreamSideData,)>,
-}
-
-#[derive(Deserialize, Debug)]
-struct FfprobeVideoStreamSideData {
-    rotation: i32,
-}
-
-#[derive(Deserialize, Debug)]
-struct FfprobeOutputFormat {
-    duration: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct FfprobeVideo {
-    streams: (FfprobeVideoStream,),
-    format: FfprobeOutputFormat,
-}
-
-#[derive(Deserialize, Debug)]
-struct FfprobeAudioStream {
-    sample_rate: String,
-    channels: u32,
-    channel_layout: String,
-    bit_rate: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct FfprobeAudio {
-    streams: Vec<FfprobeAudioStream>,
-}
 
 async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState) -> MyResponse {
     match (req.method(), req.uri().path()) {
@@ -321,7 +270,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             };
             let clip_count = clips.len();
             let temp_base_encode = clips.get(0).ok_or("no clips")?.probe.clone();
-            for (i, handle) in clips
+            let handles = clips
                 .into_iter()
                 .enumerate()
                 .map(|(i, clip)| {
@@ -349,22 +298,17 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             }))
                             .await?;
                         }
+                        match child.wait().await {
+                            Ok(status) if status.success() => {}
+                            Ok(status) => {
+                                Err(format!("[cook] ffmpeg failed with status: {status}"))?
+                            }
+                            Err(err) => Err(format!("[cook] ffmpeg failed to run: {err}"))?,
+                        }
                         Ok::<(), BoxedError>(())
                     })
                 })
-                .enumerate()
-            {
-                match handle.await {
-                    Err(err) => {
-                        eprintln!("[cook.{i}] Unexpected join error in clip:\n{err:?}");
-                    }
-                    Ok(Err(err)) => {
-                        eprintln!("[cook.{i}] Unexpected error in clip:\n{err:?}");
-                    }
-                    Ok(Ok(_)) => {}
-                }
-            }
-            eprintln!("{}", faded(&format!("[cook] Clip generation complete.")));
+                .collect::<Vec<_>>();
 
             let concat_path = format!("{work_dir}/concat.txt");
             fs::write(
@@ -383,11 +327,41 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             command.arg("-c").arg("copy");
             command.arg(&out_path);
             command.stderr(Stdio::piped());
-            eprintln!("{}", faded(&format!("[cook] {command:?}")));
-            let mut child = command.spawn()?;
-            let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
 
             tokio::spawn(async move {
+                let mut failed = false;
+                for (i, handle) in handles.into_iter().enumerate() {
+                    match handle.await {
+                        Err(err) => {
+                            eprintln!("[cook.{i}] Unexpected join error in clip:\n{err:?}");
+                            failed = true;
+                        }
+                        Ok(Err(err)) => {
+                            eprintln!("[cook.{i}] Unexpected error in clip:\n{err:?}");
+                            failed = true;
+                        }
+                        Ok(Ok(_)) => {}
+                    }
+                }
+                if failed {
+                    eprintln!("{}", faded(&format!("[cook] Clip generation failed.")));
+                    return;
+                }
+                eprintln!("{}", faded(&format!("[cook] Clip generation complete.")));
+
+                eprintln!("{}", faded(&format!("[cook] {command:?}")));
+                let mut child = match command.spawn() {
+                    Ok(child) => child,
+                    Err(err) => {
+                        eprintln!("[cook] Spawning concat failed: {err:?}.");
+                        return;
+                    }
+                };
+                let Some(stderr) = child.stderr.take() else {
+                    eprintln!("[cook] concat child doesnt have stderr??");
+                    return;
+                };
+
                 let mut reader_stream = ReaderStream::new(stderr);
                 while let Some(chunk) = tokio_stream::StreamExt::next(&mut reader_stream).await {
                     // Send the raw chunk directly to the channel
@@ -395,8 +369,6 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                         break;
                     }
                 }
-            });
-            tokio::spawn(async move {
                 match child.wait().await {
                     Ok(status) if status.success() => eprintln!("[cook] Bon appetit! {out_path}"),
                     Ok(status) => eprintln!("[cook] ffmpeg failed with status: {status}"),
