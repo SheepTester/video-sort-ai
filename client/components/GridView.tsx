@@ -8,6 +8,7 @@ type GridViewProps = {
 };
 
 const LONG_PRESS_TIMEOUT = 500;
+const MOVE_THRESHOLD = 10;
 
 export function GridView({ videos }: GridViewProps) {
   const showVideo = useVideoContext();
@@ -18,6 +19,7 @@ export function GridView({ videos }: GridViewProps) {
   const isSelecting = useRef(false);
   // used to distinguish a click from a drag
   const pointerDownTarget = useRef<EventTarget | null>(null);
+  const pointerDownCoords = useRef({ x: 0, y: 0 });
 
   const stopSelecting = useCallback(() => {
     window.clearTimeout(longPressTimer.current);
@@ -27,9 +29,15 @@ export function GridView({ videos }: GridViewProps) {
     }
   }, []);
 
-  const handlePointerMove = useCallback(() => {
-    // if the user moves their finger, it's not a long press
-    window.clearTimeout(longPressTimer.current);
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (longPressTimer.current === 0) {
+      return;
+    }
+    const dx = e.clientX - pointerDownCoords.current.x;
+    const dy = e.clientY - pointerDownCoords.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > MOVE_THRESHOLD) {
+      window.clearTimeout(longPressTimer.current);
+    }
   }, []);
 
   const handlePointerUp = useCallback(
@@ -79,6 +87,7 @@ export function GridView({ videos }: GridViewProps) {
               // we need to handle click events ourselves to distinguish from drags
               e.preventDefault();
               pointerDownTarget.current = e.currentTarget;
+              pointerDownCoords.current = { x: e.clientX, y: e.clientY };
               // if the user holds their finger down, start selecting
               longPressTimer.current = window.setTimeout(() => {
                 document.documentElement.style.overflow = "hidden";
