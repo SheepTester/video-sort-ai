@@ -1,6 +1,7 @@
 use std::{
     io::ErrorKind,
     path::PathBuf,
+    process::Stdio,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -15,6 +16,7 @@ use serde::Deserialize;
 use tokio::{
     fs::{self, File},
     io::{AsyncBufReadExt, AsyncReadExt, AsyncSeekExt, BufReader},
+    process::Command,
     sync::{Semaphore, mpsc},
 };
 use tokio_stream::wrappers::ReceiverStream;
@@ -280,7 +282,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                 serde_json::from_reader(req.collect().await?.aggregate().reader())?;
 
             let work_dir = format!(
-                "{DIR_PATH}/work/{}/",
+                "{DIR_PATH}/work/{}",
                 SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis()
             );
             fs::create_dir_all(&work_dir).await?;
@@ -317,6 +319,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                     })
                     .collect::<Vec<_>>()
             };
+            let clip_count = clips.len();
             let temp_base_encode = clips.get(0).ok_or("no clips")?.probe.clone();
             for (i, handle) in clips
                 .into_iter()
@@ -335,9 +338,11 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
                             &temp_base_encode,
                             &format!("{work_dir}/clip_{i}.mp4"),
                         )?;
+                        eprintln!("{}", faded(&format!("[cook.{i}] {command:?}")));
+                        command.stderr(Stdio::piped());
                         let mut child = command.spawn()?;
                         let mut reader =
-                            BufReader::new(child.stdout.take().ok_or("no stdout??")?).split(b'\r');
+                            BufReader::new(child.stderr.take().ok_or("no stderr??")?).split(b'\r');
                         while let Some(line) = reader.next_segment().await.transpose() {
                             tx.send(line.map(|line| {
                                 Bytes::from(format!("[{i}] {}\n", String::from_utf8_lossy(&line)))
@@ -351,20 +356,55 @@ async fn handle_request(req: Request<hyper::body::Incoming>, state: SharedState)
             {
                 match handle.await {
                     Err(err) => {
-                        eprintln!("[cook] Unexpected join error in clip {i}:\n{err:?}");
+                        eprintln!("[cook.{i}] Unexpected join error in clip:\n{err:?}");
                     }
                     Ok(Err(err)) => {
-                        eprintln!("[cook] Unexpected error in clip {i}:\n{err:?}");
+                        eprintln!("[cook.{i}] Unexpected error in clip:\n{err:?}");
                     }
                     Ok(Ok(_)) => {}
                 }
             }
+            eprintln!("{}", faded(&format!("[cook] Clip generation complete.")));
 
+            let concat_path = format!("{work_dir}/concat.txt");
+            fs::write(
+                &concat_path,
+                (0..clip_count)
+                    .map(|i| format!("file '{work_dir}/clip_{i}.mp4'\n"))
+                    .collect::<String>(),
+            )
+            .await?;
             let out_path = format!("./storage/downloads/{}.mp4", request.name);
+            let mut command = Command::new("ffmpeg");
+            command.arg("-v").arg("error");
+            command.arg("-stats");
+            command.arg("-f").arg("concat");
+            command.arg("-i").arg(&concat_path);
+            command.arg("-c").arg("copy");
+            command.arg(&out_path);
+            command.stderr(Stdio::piped());
+            eprintln!("{}", faded(&format!("[cook] {command:?}")));
+            let mut child = command.spawn()?;
+            let stderr = child.stderr.take().ok_or("Failed to get stderr")?;
 
-            // close the original tx since it's like referenced counted or
-            // whatever
-            drop(tx);
+            tokio::spawn(async move {
+                let mut reader_stream = ReaderStream::new(stderr);
+                while let Some(chunk) = tokio_stream::StreamExt::next(&mut reader_stream).await {
+                    // Send the raw chunk directly to the channel
+                    if let Err(_) = tx.send(chunk).await {
+                        break;
+                    }
+                }
+            });
+            tokio::spawn(async move {
+                match child.wait().await {
+                    Ok(status) if status.success() => eprintln!("[cook] Bon appetit! {out_path}"),
+                    Ok(status) => eprintln!("[cook] ffmpeg failed with status: {status}"),
+                    Err(err) => eprintln!("[cook] ffmpeg failed to run: {err}"),
+                }
+                // TODO: delete workdir
+            });
+
             let stream = ReceiverStream::new(rx);
             let stream_body = StreamBody::new(stream.map_ok(Frame::data));
             let boxed_body = BodyExt::boxed(stream_body);
