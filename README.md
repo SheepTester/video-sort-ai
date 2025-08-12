@@ -37,6 +37,10 @@ Then, run
 
 # Start server
 ./video-sort
+
+# Run this before cooking a video; otherwise Android will kill Termux for
+# working too hard
+termux-wake-lock
 ```
 
 And go to http://localhost:8008/

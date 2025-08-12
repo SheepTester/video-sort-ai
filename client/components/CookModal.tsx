@@ -119,8 +119,8 @@ export function CookModal({
         })
         .reduce(
           (cum, curr) => ({
-            width: cum.width + curr.width,
-            height: cum.height + curr.height,
+            width: Math.max(cum.width, curr.width),
+            height: Math.max(cum.height, curr.height),
           }),
           { width: 0, height: 0 }
         ),
