@@ -6,8 +6,8 @@ import { formatSeconds, rotToAngle } from "../util";
 import { Video as VideoComp } from "./Video";
 
 type TrimmerProps = {
-  clip: Clip;
-  video: Video;
+  clip: Clip | null;
+  video: Video | null;
   duration: number;
   otherClips: Clip[];
   onUpdate: (newClip: Clip) => void;
@@ -27,11 +27,17 @@ function Trimmer_({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // right before dialog opens, the clip has changed, set start time
+  useEffect(() => {
+    if (open && !dialogRef.current?.open && videoRef.current && clip) {
+      videoRef.current.currentTime = clip.start;
+    }
+  }, [open, clip]);
+
   useEffect(() => {
     if (open) {
       dialogRef.current?.showModal();
       if (videoRef.current) {
-        videoRef.current.currentTime = clip.start;
         videoRef.current.play();
       }
     } else {
@@ -41,6 +47,24 @@ function Trimmer_({
       }
     }
   }, [open]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !clip) return;
+    const stopPlayback = () => {
+      if (video.currentTime >= clip.end) {
+        video.pause();
+      }
+    };
+    video.addEventListener("timeupdate", stopPlayback);
+    return () => {
+      video.removeEventListener("timeupdate", stopPlayback);
+    };
+  }, [clip?.end]);
+
+  if (!clip || !video) {
+    return <dialog ref={dialogRef} className="modal trimmer-container" />;
+  }
 
   const changeTime = (field: "start" | "end", delta: number) => {
     const newValue = clip[field] + delta;
@@ -65,20 +89,6 @@ function Trimmer_({
       videoEl.play();
     }
   };
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const stopPlayback = () => {
-      if (video.currentTime >= clip.end) {
-        video.pause();
-      }
-    };
-    video.addEventListener("timeupdate", stopPlayback);
-    return () => {
-      video.removeEventListener("timeupdate", stopPlayback);
-    };
-  }, [clip.end]);
 
   const origRot = video.probe?.rotation ?? "Unrotated";
   const clipRot = clip.overrideRotation ?? origRot;

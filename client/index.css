@@ -756,7 +756,7 @@ a {
 .choices legend {
   font-size: 0.8em;
 }
-.choices p {
+.radiop {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -775,6 +775,19 @@ a {
 }
 .choices input {
   margin: 0;
+}
+.otherp {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.otherp .num {
+  margin: 0;
+  flex: 1 0 0;
+}
+.otherp .num input {
+  width: 0;
+  flex: auto;
 }
 .choices img {
   width: 30px;

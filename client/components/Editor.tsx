@@ -110,11 +110,31 @@ export function Editor({ state, tag }: EditorProps) {
     [state.videos]
   );
 
+  const sizes = useMemo(() => {
+    const sizes: Record<SizeStr, Video[]> = {};
+    for (const clip of projectState.clips) {
+      const video = videoMap[clip.thumb];
+      const origRot = video.probe?.rotation ?? "Unrotated";
+      const clipRot = clip.overrideRotation ?? origRot;
+      const { width: original_width = 0, height: original_height = 0 } =
+        video.probe ?? {};
+      const size: SizeStr =
+        isTransposed(origRot) === isTransposed(clipRot)
+          ? `${original_width}x${original_height}`
+          : `${original_height}x${original_width}`;
+      sizes[size] ??= [];
+      sizes[size].push(video);
+    }
+    return Object.entries(sizes)
+      .map(([size, videos]): [string, Set<Video>] => [size, new Set(videos)])
+      .sort((a, b) => b[1].size - a[1].size);
+  }, [videos, projectState.clips]);
+
   const currentClip = trimmingClip ?? lastTrimmingClip;
   const clip =
-    currentClip !== null &&
-    projectState.clips.find((clip) => clip.id === currentClip);
-  let trimmerModal;
+    currentClip !== null
+      ? projectState.clips.find((clip) => clip.id === currentClip) ?? null
+      : null;
   const otherClips = useMemo(
     () =>
       projectState.clips.filter(
@@ -129,19 +149,6 @@ export function Editor({ state, tag }: EditorProps) {
     }));
   }, []);
   const handleClose = useCallback(() => setTrimmingClip(null), []);
-  if (clip && videoMap[clip.thumb].probe) {
-    trimmerModal = (
-      <Trimmer
-        clip={clip}
-        video={videoMap[clip.thumb]}
-        duration={videoMap[clip.thumb].probe?.duration ?? 0}
-        otherClips={otherClips}
-        onUpdate={handleUpdate}
-        open={trimmingClip !== null}
-        onClose={handleClose}
-      />
-    );
-  }
 
   const totalDuration = useMemo(
     () =>
@@ -216,9 +223,18 @@ export function Editor({ state, tag }: EditorProps) {
 
   return (
     <div className="editor-container">
-      {trimmerModal}
+      <Trimmer
+        clip={clip}
+        video={clip ? videoMap[clip.thumb] : null}
+        duration={clip ? videoMap[clip.thumb].probe?.duration ?? 0 : 0}
+        otherClips={otherClips}
+        onUpdate={handleUpdate}
+        open={trimmingClip !== null}
+        onClose={handleClose}
+      />
       <CookModal
         videos={videos}
+        sizes={sizes}
         open={showCook}
         onClose={() => setShowCook(false)}
         onCook={async (encoding) => {

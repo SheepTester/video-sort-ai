@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { getThumbnailUrl, Probe, Video } from "../api";
-import { expect, extractFilename, map } from "../util";
+import { extractFilename, map } from "../util";
 
 const keysVideo = [
   "pix_fmt",
@@ -16,16 +16,25 @@ const keysAudio = [
 
 export type CookModalProps = {
   videos: Video[];
+  sizes: [string, Set<Video>][];
   open: boolean;
   onClose: () => void;
   onCook: (encoding: Probe) => void;
 };
-export function CookModal({ videos, open, onClose, onCook }: CookModalProps) {
+export function CookModal({
+  videos,
+  sizes,
+  open,
+  onClose,
+  onCook,
+}: CookModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [hasBeenOpen, setHasBeenOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
       dialogRef.current?.showModal();
+      setHasBeenOpen(true);
     } else {
       dialogRef.current?.close();
     }
@@ -94,6 +103,36 @@ export function CookModal({ videos, open, onClose, onCook }: CookModalProps) {
     );
   };
 
+  const handleDimChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.currentTarget.value) {
+      const input = e.currentTarget
+        .closest(".otherp")
+        ?.querySelector("[type=radio]");
+      if (input instanceof HTMLInputElement) input.checked = true;
+    }
+  };
+  const maxSize = useMemo(
+    () =>
+      sizes
+        .map(([size]) => {
+          const [width, height] = size.split("x").map(Number);
+          return { width, height };
+        })
+        .reduce(
+          (cum, curr) => ({
+            width: cum.width + curr.width,
+            height: cum.height + curr.height,
+          }),
+          { width: 0, height: 0 }
+        ),
+    [sizes]
+  );
+
+  // do not render body until it opens
+  if (!hasBeenOpen && !open) {
+    return <dialog ref={dialogRef} className="modal cook-container" />;
+  }
+
   return (
     <dialog ref={dialogRef} onClose={onClose} className="modal cook-container">
       <form method="dialog" className="cook-header">
@@ -108,23 +147,24 @@ export function CookModal({ videos, open, onClose, onCook }: CookModalProps) {
           let audio: Probe["audio"] = null;
           if (data.has("sample_rate")) {
             audio = {
-              sample_rate:
-                map(data.get("sample_rate"), Number) ?? expect("sample_rate"),
-              channels: map(data.get("channels"), Number) ?? expect("channels"),
-              channel_layout:
-                map(data.get("channel_layout"), String) ??
-                expect("channel_layout"),
+              sample_rate: Number(data.get("sample_rate")),
+              channels: Number(data.get("channels")),
+              channel_layout: String(data.get("channel_layout")),
               // Unused
               bit_rate: 0,
             };
           }
+          const [width, height] =
+            data.get("size") === "other"
+              ? [Number(data.get("width")), Number(data.get("height"))]
+              : String(data.get("size")).split("x");
           onCook({
-            pix_fmt: map(data.get("pix_fmt"), String) ?? expect("pix_fmt"),
+            width: +width,
+            height: +height,
+            pix_fmt: String(data.get("pix_fmt")),
             color_primaries: map(data.get("color_primaries"), String),
             color_space: map(data.get("color_space"), String),
             color_transfer: map(data.get("color_transfer"), String),
-            width: 0,
-            height: 0,
             audio,
             // unused
             bit_rate: 0,
@@ -133,6 +173,56 @@ export function CookModal({ videos, open, onClose, onCook }: CookModalProps) {
           });
         }}
       >
+        <fieldset className="choices">
+          <legend>Video Resolution</legend>
+          {sizes.map(([size, videos], i) => (
+            <p key={size} className="radiop">
+              <label>
+                <input
+                  type="radio"
+                  name="size"
+                  value={size}
+                  defaultChecked={i === 0}
+                />{" "}
+                {size.replace("x", "×")}
+              </label>
+              {Array.from(videos, (video) => (
+                <img
+                  key={video.thumbnail_name}
+                  alt={extractFilename(video)}
+                  src={getThumbnailUrl(video).toString()}
+                />
+              ))}
+            </p>
+          ))}
+          <p className="otherp">
+            <label>
+              <input type="radio" name="size" value="other" /> Custom
+            </label>{" "}
+            <label className="num">
+              Width:{" "}
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                name="width"
+                defaultValue={maxSize.width}
+                onChange={handleDimChange}
+              />
+            </label>{" "}
+            <label className="num">
+              Height:{" "}
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                name="height"
+                defaultValue={maxSize.height}
+                onChange={handleDimChange}
+              />
+            </label>
+          </p>
+        </fieldset>
         {renderField("pix_fmt", "Pixel Format")}
         {renderField("color_primaries", "Color Primaries")}
         {renderField("color_space", "Color Space")}

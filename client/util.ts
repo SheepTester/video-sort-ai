@@ -62,7 +62,3 @@ export const rotToAngle: Record<Rotation, number> = {
 
 export const map = <A, B>(v: A | null, fn: (v: A) => B | null): B | null =>
   v === null ? null : fn(v);
-
-export const expect = (message: string) => {
-  throw new TypeError(message);
-};
