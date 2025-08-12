@@ -6,8 +6,8 @@ use tokio::{fs, sync::RwLock};
 use crate::util::MyResult;
 
 pub const DIR_PATH: &str = "./.video-sort";
-/// my phone has 8 cores apparently so I'll leave one for the rest of its brain cells
-pub const MAX_CONCURRENT_FFMPEG: usize = 7;
+/// my phone has 2 Gold and 6 Silver cores apparently so I'll hope it uses the silver one to save the gold for the rest of my phone's brain cells
+pub const MAX_CONCURRENT_FFMPEG: usize = 6;
 
 pub type SharedState = Arc<RwLock<State>>;
 
