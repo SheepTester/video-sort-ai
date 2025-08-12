@@ -6,7 +6,7 @@ use tokio::{fs, sync::RwLock};
 use crate::util::MyResult;
 
 pub const DIR_PATH: &str = "./.video-sort";
-pub const MAX_CONCURRENT_FFMPEG: usize = 1;
+pub const MAX_CONCURRENT_FFMPEG: usize = 10;
 
 pub type SharedState = Arc<RwLock<State>>;
 

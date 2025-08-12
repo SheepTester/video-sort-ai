@@ -696,22 +696,25 @@ a {
   background-color: rgba(0, 0, 0, 0.5);
   visibility: hidden;
   opacity: 0;
-  transition: all 0.2s;
+  transition: all 3s;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   box-sizing: border-box;
+  padding: 5px;
   gap: 20px;
 }
 .cook-status-visible {
   visibility: visible;
   opacity: 1;
+  transition: all 0.2s;
 }
 .cook-status pre {
   word-break: break-all;
-  white-space: pre-wrap;
   width: 105ch;
+  max-width: 100%;
+  overflow: hidden;
   margin: 0;
   font-size: 0.5em;
 }
@@ -724,6 +727,11 @@ a {
   border-top-color: currentColor;
   border-left-color: currentColor;
   animation: spin 0.5s linear infinite;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.cook-status-visible .spinner {
+  opacity: 1;
 }
 @keyframes spin {
   from {

@@ -264,20 +264,16 @@ export function Editor({ state, tag }: EditorProps) {
                 const match = line.match(/\[(\d+)\] /);
                 const [cls, stat] = match
                   ? [match[1], line.slice(match[0].length)]
-                  : ["", line];
+                  : ["+", line]; // concat doesnt prefix its output
                 if (stat) statuses[cls] = stat;
                 data = data.slice(lineEnd.index + lineEnd[0].length);
               }
               setCookStatus(
                 Object.entries(statuses)
-                  .map(([key, status]) => `[${key || "concat"}] ${status}`)
+                  .map(([key, status]) => `[${key}] ${status}`)
                   .join("\n")
               );
             }
-            await Promise.race([
-              new Promise((resolve) => window.requestAnimationFrame(resolve)),
-              new Promise((resolve) => setTimeout(resolve, 100)),
-            ]);
             alert(
               `Successfully saved to video-sort-${tag}.mp4 in your Downloads folder.`
             );
