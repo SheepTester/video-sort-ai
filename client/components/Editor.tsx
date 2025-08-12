@@ -238,9 +238,12 @@ export function Editor({ state, tag }: EditorProps) {
         open={showCook}
         onClose={() => setShowCook(false)}
         onCook={async (encoding) => {
+          setShowCook(false);
           setLoading(true);
           setCookStatus("Getting ready to cook...");
           try {
+            const statuses: Record<string, string> = {};
+            let data = "";
             for await (const status of cook(
               projectState.clips.map(
                 ({ start, end, thumb, overrideRotation }) => ({
@@ -253,12 +256,28 @@ export function Editor({ state, tag }: EditorProps) {
               encoding,
               `video-sort-${tag}`
             )) {
+              data += status;
+              while (true) {
+                const lineEnd = data.match(/\r?\n|\r/);
+                if (lineEnd?.index === undefined) break;
+                const line = data.slice(0, lineEnd.index);
+                const match = line.match(/\[(\d+)\] /);
+                const [cls, stat] = match
+                  ? [match[1], line.slice(match[0].length)]
+                  : ["", line];
+                if (stat) statuses[cls] = stat;
+                data = data.slice(lineEnd.index + lineEnd[0].length);
+              }
               setCookStatus(
-                `total=${formatHms(totalDuration)}${status
-                  .trim()
-                  .replace(/\b(?=\w+=)/g, "\n")}`
+                Object.entries(statuses)
+                  .map(([key, status]) => `[${key || "concat"}] ${status}`)
+                  .join("\n")
               );
             }
+            await Promise.race([
+              new Promise((resolve) => window.requestAnimationFrame(resolve)),
+              new Promise((resolve) => setTimeout(resolve, 100)),
+            ]);
             alert(
               `Successfully saved to video-sort-${tag}.mp4 in your Downloads folder.`
             );
@@ -424,10 +443,10 @@ export function Editor({ state, tag }: EditorProps) {
           </button>
         ))}
       </div>
-      <pre className={`cook-status ${loading ? "cook-status-visible" : ""}`}>
+      <div className={`cook-status ${loading ? "cook-status-visible" : ""}`}>
         <div className="spinner" />
-        {cookStatus}
-      </pre>
+        <pre>{cookStatus}</pre>
+      </div>
     </div>
   );
 }

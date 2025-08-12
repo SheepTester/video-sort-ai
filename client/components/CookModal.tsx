@@ -59,7 +59,6 @@ export function CookModal({
         }
       }
     }
-    console.log(map);
     return Object.fromEntries(
       Object.entries(map).map(([k, v]) => [
         k,
@@ -80,7 +79,7 @@ export function CookModal({
       <fieldset className="choices">
         <legend>{label}</legend>
         {choices.map(([choice, videos], i) => (
-          <p key={choice}>
+          <p key={choice} className="radiop">
             <label>
               <input
                 type="radio"

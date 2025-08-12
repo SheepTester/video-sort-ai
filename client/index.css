@@ -701,15 +701,19 @@ a {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  word-break: break-all;
-  white-space: pre-wrap;
   box-sizing: border-box;
-  padding: 40px;
   gap: 20px;
 }
 .cook-status-visible {
   visibility: visible;
   opacity: 1;
+}
+.cook-status pre {
+  word-break: break-all;
+  white-space: pre-wrap;
+  width: 105ch;
+  margin: 0;
+  font-size: 0.5em;
 }
 
 .spinner {
