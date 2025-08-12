@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Probe, Video, getThumbnailUrl } from "../api";
-import { groupBy, uniqBy } from "../util";
+import { groupBy } from "../util";
 
 type TrimmerProps = {
   videos: Video[];
@@ -15,18 +15,13 @@ type ProbeField<T> = {
   videos: Video[];
 };
 
-const toVideoMap = (videos: Video[]) =>
-  Object.fromEntries(videos.map((video) => [video.thumbnail_name, video]));
-
 export function CookModal({ videos, open, onClose, onCook }: TrimmerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [probe, setProbe] = useState<Probe | null>(null);
 
   const probedVideos = useMemo(
     () => videos.filter((video) => video.probe),
     [videos]
   );
-  const videoMap = useMemo(() => toVideoMap(videos), [videos]);
   const firstVideo = videos[0]?.probe;
   const hasAudio = useMemo(
     () => probedVideos.some((video) => video.probe?.audio),
@@ -34,16 +29,18 @@ export function CookModal({ videos, open, onClose, onCook }: TrimmerProps) {
   );
 
   const unique = <T,>(
-    field: keyof Probe,
     toValue: (v: NonNullable<Video["probe"]>) => T,
     toLabel: (v: T) => string
   ) =>
     Object.entries(groupBy(probedVideos, (v) => toValue(v.probe!))).map(
-      ([value, videos]) => ({
-        value: toValue(videos[0].probe!),
-        label: toLabel(toValue(videos[0].probe!)),
-        videos,
-      })
+      ([, videos]) => {
+        const value = toValue(videos[0].probe!);
+        return {
+          value,
+          label: toLabel(value),
+          videos,
+        };
+      }
     );
 
   const uniqueAudio = <T,>(
@@ -53,37 +50,39 @@ export function CookModal({ videos, open, onClose, onCook }: TrimmerProps) {
     const audioProbed = probedVideos.filter((v) => v.probe!.audio);
     return Object.entries(
       groupBy(audioProbed, (v) => v.probe!.audio![field])
-    ).map(([value, videos]) => ({
-      value: videos[0].probe!.audio![field],
-      label: toLabel(videos[0].probe!.audio![field] as T),
-      videos,
-    }));
+    ).map(([, videos]) => {
+      const value = videos[0].probe!.audio![field] as T;
+      return {
+        value,
+        label: toLabel(value),
+        videos,
+      };
+    });
   };
 
   const resolutionOptions = useMemo(
     () =>
       unique(
-        "width",
-        (p) => ({ width: p.width, height: p.height }),
-        (v) => `${v.width}x${v.height}`
+        (p) => `${p.width}x${p.height}`,
+        (v) => v
       ),
     [probedVideos]
   );
 
   const pixFmtOptions = useMemo(
-    () => unique("pix_fmt", (p) => p.pix_fmt, String),
+    () => unique((p) => p.pix_fmt, String),
     [probedVideos]
   );
   const colorSpaceOptions = useMemo(
-    () => unique("color_space", (p) => p.color_space, String),
+    () => unique((p) => p.color_space ?? "null", String),
     [probedVideos]
   );
   const colorTransferOptions = useMemo(
-    () => unique("color_transfer", (p) => p.color_transfer, String),
+    () => unique((p) => p.color_transfer ?? "null", String),
     [probedVideos]
   );
   const colorPrimariesOptions = useMemo(
-    () => unique("color_primaries", (p) => p.color_primaries, String),
+    () => unique((p) => p.color_primaries ?? "null", String),
     [probedVideos]
   );
 
@@ -103,44 +102,19 @@ export function CookModal({ videos, open, onClose, onCook }: TrimmerProps) {
   useEffect(() => {
     if (open) {
       dialogRef.current?.showModal();
-      setProbe(
-        firstVideo
-          ? {
-              ...firstVideo,
-              audio: hasAudio ? firstVideo.audio : undefined,
-            }
-          : null
-      );
     } else {
       dialogRef.current?.close();
     }
-  }, [open, firstVideo, hasAudio]);
-
-  const setField = <T,>(field: keyof Probe, value: T) =>
-    setProbe((p) => (p ? { ...p, [field]: value } : null));
-
-  const setAudioField = <T,>(
-    field: keyof NonNullable<Probe["audio"]>,
-    value: T
-  ) =>
-    setProbe((p) =>
-      p ? { ...p, audio: p.audio ? { ...p.audio, [field]: value } : p.audio } : null
-    );
-
-  const [customResolution, setCustomResolution] = useState(false);
+  }, [open]);
 
   const Radio = <T,>({
     name,
     options,
-    get,
-    set,
-    other,
+    defaultValue,
   }: {
     name: string;
     options: ProbeField<T>[];
-    get: (p: Probe) => T;
-    set: (v: T) => void;
-    other?: ReactNode;
+    defaultValue?: T;
   }) => (
     <div className="cook-field">
       <h4>{name}</h4>
@@ -150,13 +124,7 @@ export function CookModal({ videos, open, onClose, onCook }: TrimmerProps) {
             type="radio"
             name={name}
             value={label}
-            checked={probe ? !customResolution && label === get(probe) : false}
-            onChange={() => {
-              set(value);
-              if (other) {
-                setCustomResolution(false);
-              }
-            }}
+            defaultChecked={label === defaultValue}
           />
           {label}
           <div className="videos">
@@ -169,19 +137,6 @@ export function CookModal({ videos, open, onClose, onCook }: TrimmerProps) {
           </div>
         </label>
       ))}
-      {other && (
-        <label>
-          <input
-            type="radio"
-            name={name}
-            value="other"
-            checked={customResolution}
-            onChange={() => setCustomResolution(true)}
-          />
-          other
-          {customResolution && other}
-        </label>
-      )}
     </div>
   );
 
@@ -195,58 +150,105 @@ export function CookModal({ videos, open, onClose, onCook }: TrimmerProps) {
         className="cook-body"
         onSubmit={(e) => {
           e.preventDefault();
-          if (probe) {
-            onCook(probe);
+          if (!firstVideo) {
+            return;
           }
+          const data = new FormData(e.currentTarget);
+          const resolution = data.get("resolution") as string;
+          const [width, height] =
+            resolution === "other"
+              ? [
+                  data.get("width") as string,
+                  data.get("height") as string,
+                ].map(Number)
+              : resolution.split("x").map(Number);
+          const pix_fmt = data.get("pixel format") as string;
+          const color_space = data.get("color space") as string;
+          const color_transfer = data.get("color transfer") as string;
+          const color_primaries = data.get("color primaries") as string;
+
+          onCook({
+            ...firstVideo,
+            width,
+            height,
+            pix_fmt,
+            color_space: color_space === "null" ? null : color_space,
+            color_transfer: color_transfer === "null" ? null : color_transfer,
+            color_primaries:
+              color_primaries === "null" ? null : color_primaries,
+            audio: hasAudio
+              ? {
+                  ...firstVideo.audio!,
+                  sample_rate: Number(
+                    (data.get("sample rate") as string).replace(" kHz", "")
+                  ),
+                  channels: Number(data.get("channels") as string),
+                  channel_layout: data.get("channel layout") as string,
+                }
+              : undefined,
+          });
         }}
       >
-        <Radio
-          name="resolution"
-          options={resolutionOptions}
-          get={(p) => `${p.width}x${p.height}`}
-          set={(v) => {
-            setField("width", v.width);
-            setField("height", v.height);
-          }}
-          other={
+        <div className="cook-field">
+          <h4>resolution</h4>
+          {resolutionOptions.map(({ value, label, videos }) => (
+            <label key={label}>
+              <input
+                type="radio"
+                name="resolution"
+                value={label}
+                defaultChecked={
+                  `${firstVideo?.width}x${firstVideo?.height}` === label
+                }
+              />
+              {label}
+              <div className="videos">
+                {videos.map((video) => (
+                  <img
+                    key={video.thumbnail_name}
+                    src={getThumbnailUrl(video).toString()}
+                  />
+                ))}
+              </div>
+            </label>
+          ))}
+          <label>
+            <input type="radio" name="resolution" value="other" />
+            other
             <div className="custom-resolution">
               <input
+                name="width"
                 type="number"
-                value={probe?.width}
-                onChange={(e) => setField("width", e.target.valueAsNumber)}
+                defaultValue={firstVideo?.width}
               />
               x
               <input
+                name="height"
                 type="number"
-                value={probe?.height}
-                onChange={(e) => setField("height", e.target.valueAsNumber)}
+                defaultValue={firstVideo?.height}
               />
             </div>
-          }
-        />
+          </label>
+        </div>
         <Radio
           name="pixel format"
           options={pixFmtOptions}
-          get={(p) => p.pix_fmt}
-          set={(v) => setField("pix_fmt", v)}
+          defaultValue={firstVideo?.pix_fmt}
         />
         <Radio
           name="color space"
           options={colorSpaceOptions}
-          get={(p) => p.color_space}
-          set={(v) => setField("color_space", v)}
+          defaultValue={firstVideo?.color_space ?? "null"}
         />
         <Radio
           name="color transfer"
           options={colorTransferOptions}
-          get={(p) => p.color_transfer}
-          set={(v) => setField("color_transfer", v)}
+          defaultValue={firstVideo?.color_transfer ?? "null"}
         />
         <Radio
           name="color primaries"
           options={colorPrimariesOptions}
-          get={(p) => p.color_primaries}
-          set={(v) => setField("color_primaries", v)}
+          defaultValue={firstVideo?.color_primaries ?? "null"}
         />
         {hasAudio && (
           <>
@@ -254,24 +256,25 @@ export function CookModal({ videos, open, onClose, onCook }: TrimmerProps) {
             <Radio
               name="sample rate"
               options={sampleRateOptions}
-              get={(p) => p.audio?.sample_rate}
-              set={(v) => setAudioField("sample_rate", v)}
+              defaultValue={
+                firstVideo?.audio
+                  ? `${firstVideo.audio.sample_rate / 1000} kHz`
+                  : undefined
+              }
             />
             <Radio
               name="channels"
               options={channelOptions}
-              get={(p) => p.audio?.channels}
-              set={(v) => setAudioField("channels", v)}
+              defaultValue={firstVideo?.audio?.channels}
             />
             <Radio
               name="channel layout"
               options={channelLayoutOptions}
-              get={(p) => p.audio?.channel_layout}
-              set={(v) => setAudioField("channel_layout", v)}
+              defaultValue={firstVideo?.audio?.channel_layout}
             />
           </>
         )}
-        <button type="submit" disabled={!probe}>
+        <button type="submit" disabled={!firstVideo}>
           cook! 🧑‍🍳
         </button>
       </form>
