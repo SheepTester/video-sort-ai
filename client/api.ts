@@ -10,7 +10,7 @@ export type Video = {
   mtime: { secs_since_epoch: number; nanos_since_epoch: number };
   stow_state: "Original" | { Elsewhere: string };
   size: number;
-  probe?: Probe | null;
+  probe: Probe | null;
 };
 export type Probe = {
   width: number;
@@ -22,12 +22,12 @@ export type Probe = {
   color_transfer: string | null;
   color_primaries: string | null;
   bit_rate: number;
-  audio?: {
+  audio: {
     sample_rate: number;
     bit_rate: number;
     channels: number;
     channel_layout: string;
-  };
+  } | null;
 };
 export type Rotation = "Unrotated" | "Neg90" | "Pos90" | "Neg180";
 export const isTransposed = (rot: Rotation) =>

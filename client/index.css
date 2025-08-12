@@ -562,7 +562,8 @@ a {
   gap: 16px;
 }
 
-.trimmer-header h3 {
+.trimmer-header h3,
+.cook-header h3 {
   margin: 0;
   font-size: 1em;
 }
@@ -741,4 +742,50 @@ a {
   right: 10px;
   opacity: 0.5;
   font-size: 0.8em;
+}
+
+.cookform {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+.cookform h4 {
+  margin: 0;
+}
+.choices legend {
+  font-size: 0.8em;
+}
+.choices p {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 5px;
+  margin: 0;
+}
+.choices p:not(:first-child) {
+  margin-top: 5px;
+}
+.choices label {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.choices input {
+  margin: 0;
+}
+.choices img {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+.cookform button {
+  background-color: color-mix(in srgb, CanvasText 20%, Canvas);
+  border-radius: 4px;
+  padding: 4px 8px;
+  position: sticky;
+  bottom: 10px;
 }
