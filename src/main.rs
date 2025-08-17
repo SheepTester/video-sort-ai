@@ -77,7 +77,7 @@ async fn main() -> MyResult<()> {
             },
             Err(err) => Err(err)?,
         };
-        state.version = Some(String::from(include_str!("./static/version.txt")));
+        state.version = Some(String::from(env!("CARGO_PKG_VERSION")));
         state
     }));
 
@@ -94,10 +94,7 @@ async fn main() -> MyResult<()> {
         None => {
             eprintln!(
                 "{}",
-                bold(&format!(
-                    "Video Sort {}",
-                    include_str!("./static/version.txt")
-                ))
+                bold(&format!("Video Sort {}", env!("CARGO_PKG_VERSION")))
             );
             {
                 let videos = &sharable_state.read().await.videos;
@@ -129,7 +126,7 @@ async fn main() -> MyResult<()> {
             add_videos(&path, sharable_state).await?;
         }
         Some("version" | "-v" | "--version") => {
-            println!("{}", include_str!("./static/version.txt"));
+            println!("{}", env!("CARGO_PKG_VERSION"));
         }
         Some("help" | "-h" | "--help") => {
             eprintln!("{}", bold("Available commands"));
@@ -151,10 +148,7 @@ async fn main() -> MyResult<()> {
         Some("about") => {
             eprintln!(
                 "{}",
-                bold(&format!(
-                    "Video Sort {}",
-                    include_str!("./static/version.txt")
-                ))
+                bold(&format!("Video Sort {}", env!("CARGO_PKG_VERSION")))
             );
             eprintln!("Made by Sean");
             eprintln!();
