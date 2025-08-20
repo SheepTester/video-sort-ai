@@ -145,3 +145,58 @@ pub async fn save_state(state: &State) -> MyResult<()> {
     .await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_rotation_transposed() {
+        assert!(!Rotation::Unrotated.transposed());
+        assert!(Rotation::Neg90.transposed());
+        assert!(Rotation::Pos90.transposed());
+        assert!(!Rotation::Neg180.transposed());
+    }
+
+    #[test]
+    fn test_video_display_name() {
+        let video = Video::new(
+            PathBuf::from("/path/to/video.mp4"),
+            "video.mp4".to_string(),
+            SystemTime::now(),
+            12345,
+        );
+        assert_eq!(video.display_name(), "video.mp4");
+    }
+
+    #[tokio::test]
+    async fn test_video_move_and_restore() {
+        let dir = tempdir().unwrap();
+        let original_path = dir.path().join("original.mp4");
+        let new_path = dir.path().join("new.mp4");
+        File::create(&original_path).unwrap();
+
+        let mut video = Video::new(
+            original_path.clone(),
+            "original.mp4".to_string(),
+            SystemTime::now(),
+            12345,
+        );
+
+        // Test move
+        assert!(original_path.exists());
+        assert!(!new_path.exists());
+        video.move_file(new_path.clone()).await.unwrap();
+        assert!(!original_path.exists());
+        assert!(new_path.exists());
+        assert_eq!(video.current_loc(), &new_path);
+
+        // Test restore
+        video.restore_file().await.unwrap();
+        assert!(original_path.exists());
+        assert!(!new_path.exists());
+        assert_eq!(video.current_loc(), &original_path);
+    }
+}
