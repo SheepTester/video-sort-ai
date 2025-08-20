@@ -1,11 +1,12 @@
 use http_body_util::{BodyExt, Full, combinators::BoxBody};
-use hyper::{Response, StatusCode, body::Bytes};
+use hyper::{Request, Response, StatusCode, body::Bytes};
 use serde::Serialize;
 
 use crate::util::MyResult;
 
 pub const CORS: &str = "http://127.0.0.1:8000";
 
+pub type Req = Request<hyper::body::Incoming>;
 pub type MyResponse = MyResult<Response<BoxBody<Bytes, std::io::Error>>>;
 
 pub fn escape_html(text: &str) -> String {

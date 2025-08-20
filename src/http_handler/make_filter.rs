@@ -1,6 +1,6 @@
 use tokio::process::Command;
 
-use crate::{common::ProbeResult, http_handler::CookClip, util::MyResult};
+use crate::{common::ProbeResult, http_handler::probe::CookClip, util::MyResult};
 
 pub fn make_clip(
     clip: &CookClip,
