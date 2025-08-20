@@ -1,13 +1,10 @@
-use std::{io::ErrorKind, ops::Add};
-
 use http_body_util::BodyExt;
 use hyper::body::Buf;
-use tokio::fs;
 
 use crate::{
-    common::{DIR_PATH, SharedState, save_state},
+    common::{SharedState, save_state},
     http_handler::{
-        defs::{JsonError, VideoMetadataEditReq, VideoSelectRequest},
+        defs::{JsonError, VideoMetadataEditReq},
         util::{MyResponse, Req, build_json_response},
     },
 };

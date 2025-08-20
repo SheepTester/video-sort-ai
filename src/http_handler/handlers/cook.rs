@@ -25,7 +25,7 @@ use crate::{
     http_handler::{
         defs::CookReq,
         make_filter::make_clip,
-        probe::CookClip,
+        probe::defs::CookClip,
         util::{CORS, MyResponse, Req},
     },
     util::BoxedError,
