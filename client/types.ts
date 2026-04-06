@@ -1,4 +1,4 @@
-import { Rotation } from "./api";
+import type { Rotation } from "./api";
 
 export type ViewMode = { mode: "list" } | { mode: "feed" } | { mode: "grid" };
 
