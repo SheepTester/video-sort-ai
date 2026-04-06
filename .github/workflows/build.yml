@@ -1,4 +1,5 @@
 name: Build and release
+run-name: Build and release ${{ inputs.version || github.ref_name }}
 
 on:
   push:
@@ -48,18 +49,35 @@ jobs:
             echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
           fi
 
+      - name: Cache rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache cross
+        id: cache-cross
+        uses: actions/cache@v4
+        with:
+          path: ./cross-bin
+          key: cross-e281947ca900da425e4ecea7483cfde646c8a1ea
+
       - name: Install cross
+        if: steps.cache-cross.outputs.cache-hit != 'true'
         run: |
-          cargo install --git https://github.com/cross-rs/cross.git cross --rev e281947ca900da425e4ecea7483cfde646c8a1ea
+          cargo install --git https://github.com/cross-rs/cross.git cross --rev e281947ca900da425e4ecea7483cfde646c8a1ea --root ./cross-bin
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
       - name: Build client
         run: |
-          npm install
+          npm ci
           npm run client:build
 
       - name: Build server
         run: |
-          cross build --release --target aarch64-linux-android
+          ./cross-bin/bin/cross build --release --target aarch64-linux-android
 
       - name: Release
         uses: softprops/action-gh-release@v2
