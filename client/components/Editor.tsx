@@ -22,6 +22,7 @@ import { ProjectState, Clip } from "../types";
 import { useSetState } from "../contexts/state";
 import { formatHms, formatMmSs, rotToAngle } from "../util";
 import { CookModal } from "./CookModal";
+import { calculatePlaybackDecision, PlaybackState, VideoState, PlaybackDecision } from "../playback";
 
 type SizeStr = `${number}x${number}`;
 function parseSize(size: string): Size {
@@ -156,66 +157,65 @@ export function Editor({ state, tag }: EditorProps) {
     [projectState.clips]
   );
 
-  useEffect(() => {
-    if (time >= totalDuration) {
-      setPlaying(false);
-      setTime(totalDuration);
+  const applyDecision = useCallback(() => {
+    const state: PlaybackState = {
+      time,
+      playing,
+      speedUp,
+      clips: projectState.clips,
+    };
+    const videos: VideoState[] = Object.entries(videoRefs.current).map(([thumb, v]) => ({
+      thumb,
+      currentTime: v.currentTime,
+      paused: v.paused,
+    }));
+
+    const decision = calculatePlaybackDecision(state, videos);
+
+    if (decision.newState) {
+      if (decision.newState.time !== undefined) {
+         setTime(decision.newState.time);
+      }
+      if (decision.newState.playing !== undefined) {
+         setPlaying(decision.newState.playing);
+      }
     }
-  }, [time, totalDuration]);
+
+    for (const action of decision.actions) {
+      const video = videoRefs.current[action.thumb];
+      if (!video) continue;
+
+      if (action.type === "PLAY") {
+        video.play().catch(() => {});
+      } else if (action.type === "PAUSE") {
+        video.pause();
+      } else if (action.type === "SEEK") {
+        video.currentTime = action.value as number;
+      } else if (action.type === "SET_PLAYBACK_RATE") {
+        video.playbackRate = action.value as number;
+      } else if (action.type === "SET_MUTED") {
+        video.muted = action.value as boolean;
+      }
+    }
+  }, [time, playing, speedUp, projectState.clips]);
+
+  useEffect(() => {
+    applyDecision();
+  }, [applyDecision]);
 
   let t = 0;
   let viewingClip: { offset: number; clip: Clip } | null = null;
   for (const clip of projectState.clips) {
     const duration = clip.end - clip.start;
-    if (time - t < duration) {
+    if (time - t < duration || (time >= totalDuration && t + duration >= totalDuration)) {
       viewingClip = { offset: t, clip };
       break;
     }
     t += duration;
   }
 
-  const lastPlayingVideo = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    const video = viewingClip && videoRefs.current[viewingClip.clip.thumb];
-    if (!video || !viewingClip) return;
-
-    const handleTimeUpdate = () => {
-      if (lastPlayingVideo.current !== video) return;
-      setTime(t + video.currentTime - viewingClip.clip.start);
-    };
-    video.addEventListener("timeupdate", handleTimeUpdate);
-    video.addEventListener("ended", handleTimeUpdate);
-
-    const targetTime = time - t + viewingClip.clip.start;
-    if (Math.abs(video.currentTime - targetTime) > 0.2) {
-      video.currentTime = targetTime;
-    }
-    if (lastPlayingVideo.current && lastPlayingVideo.current !== video) {
-      lastPlayingVideo.current.pause();
-      console.log("pause old");
-    }
-    lastPlayingVideo.current = video;
-    if (playing) {
-      if (video.paused) {
-        video.play();
-      }
-    } else {
-      if (!video.paused) {
-        video.pause();
-        console.log("pause because pause");
-      }
-    }
-    return () => {
-      video.removeEventListener("timeupdate", handleTimeUpdate);
-      video.removeEventListener("ended", handleTimeUpdate);
-    };
-  }, [playing, viewingClip]);
-
   const handlePointerEnd = (e: PointerEvent) => {
     if (pointerId.current === e.pointerId) {
-      Object.values(videoRefs.current).forEach(
-        (video) => (video.playbackRate = 1)
-      );
       pointerId.current = null;
       setSpeedUp(false);
     }
@@ -305,6 +305,11 @@ export function Editor({ state, tag }: EditorProps) {
                 ref={(elem) => {
                   if (elem) videoRefs.current[video.thumbnail_name] = elem;
                 }}
+                onTimeUpdate={applyDecision}
+                onEnded={applyDecision}
+                onPlay={applyDecision}
+                onPause={applyDecision}
+                onSeeked={applyDecision}
                 style={{
                   visibility:
                     viewingClip?.clip.thumb === video.thumbnail_name
@@ -350,10 +355,7 @@ export function Editor({ state, tag }: EditorProps) {
           <button
             className={`speed ${speedUp ? "sped-up" : ""}`}
             onPointerDown={(e) => {
-              if (pointerId.current === null && lastPlayingVideo.current) {
-                Object.values(videoRefs.current).forEach(
-                  (video) => (video.playbackRate = 2)
-                );
+              if (pointerId.current === null) {
                 pointerId.current = e.pointerId;
                 e.currentTarget.setPointerCapture(e.pointerId);
                 setSpeedUp(true);
