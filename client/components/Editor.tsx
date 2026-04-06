@@ -174,48 +174,99 @@ export function Editor({ state, tag }: EditorProps) {
     t += duration;
   }
 
-  const lastPlayingVideo = useRef<HTMLVideoElement>(null);
+  const lastPlayingVideo = useRef<HTMLVideoElement | null>(null);
+  // Refs for use in timeupdate handler to avoid stale closures
+  const clipOffsetRef = useRef(0);
+  const clipStartRef = useRef(0);
+  const clipEndRef = useRef(0);
+  const timeRef = useRef(time);
+  timeRef.current = time;
+  const speedUpRef = useRef(speedUp);
+  speedUpRef.current = speedUp;
+
+  if (viewingClip) {
+    clipOffsetRef.current = viewingClip.offset;
+    clipStartRef.current = viewingClip.clip.start;
+    clipEndRef.current = viewingClip.clip.end;
+  }
+
+  const viewingClipId = viewingClip?.clip.id ?? null;
+
+  // Main playback effect: only re-runs when the active clip or play state changes
   useEffect(() => {
-    const video = viewingClip && videoRefs.current[viewingClip.clip.thumb];
-    if (!video || !viewingClip) return;
+    const clip = viewingClip?.clip;
+    const video = clip ? videoRefs.current[clip.thumb] : null;
+
+    // Mute all videos; the active one is unmuted below
+    Object.values(videoRefs.current).forEach((v) => {
+      v.muted = v !== video;
+    });
+
+    if (!video || !clip || !viewingClip) {
+      if (lastPlayingVideo.current) {
+        lastPlayingVideo.current.pause();
+        lastPlayingVideo.current = null;
+      }
+      return;
+    }
 
     const handleTimeUpdate = () => {
       if (lastPlayingVideo.current !== video) return;
-      setTime(t + video.currentTime - viewingClip.clip.start);
+      if (video.currentTime >= clipEndRef.current) {
+        // Clip boundary reached: stop video and advance time to clip end
+        video.pause();
+        video.currentTime = clipEndRef.current;
+        setTime(clipOffsetRef.current + clipEndRef.current - clipStartRef.current);
+      } else {
+        setTime(clipOffsetRef.current + video.currentTime - clipStartRef.current);
+      }
     };
+
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("ended", handleTimeUpdate);
 
-    const targetTime = time - t + viewingClip.clip.start;
-    if (Math.abs(video.currentTime - targetTime) > 0.2) {
-      video.currentTime = targetTime;
-    }
-    if (lastPlayingVideo.current && lastPlayingVideo.current !== video) {
+    const isSameVideo = lastPlayingVideo.current === video;
+    if (!isSameVideo && lastPlayingVideo.current) {
       lastPlayingVideo.current.pause();
-      console.log("pause old");
     }
     lastPlayingVideo.current = video;
-    if (playing) {
-      if (video.paused) {
-        video.play();
-      }
-    } else {
-      if (!video.paused) {
-        video.pause();
-        console.log("pause because pause");
-      }
+
+    // Always seek when switching to a new video; only seek same video if significantly off
+    const targetTime = timeRef.current - viewingClip.offset + clip.start;
+    if (!isSameVideo || Math.abs(video.currentTime - targetTime) > 0.5) {
+      video.currentTime = targetTime;
     }
+
+    if (playing) {
+      video.playbackRate = speedUpRef.current ? 2 : 1;
+      video.play();
+    } else {
+      video.pause();
+    }
+
     return () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("ended", handleTimeUpdate);
     };
-  }, [playing, viewingClip]);
+  }, [viewingClipId, playing]);
+
+  // Sync video position when user scrubs while paused
+  useEffect(() => {
+    if (playing) return;
+    const clip = viewingClip?.clip;
+    const video = clip ? videoRefs.current[clip.thumb] : null;
+    if (!video || !viewingClip) return;
+    const targetTime = time - viewingClip.offset + clip.start;
+    if (Math.abs(video.currentTime - targetTime) > 0.1) {
+      video.currentTime = targetTime;
+    }
+  }, [time, playing]);
 
   const handlePointerEnd = (e: PointerEvent) => {
     if (pointerId.current === e.pointerId) {
-      Object.values(videoRefs.current).forEach(
-        (video) => (video.playbackRate = 1)
-      );
+      if (lastPlayingVideo.current) {
+        lastPlayingVideo.current.playbackRate = 1;
+      }
       pointerId.current = null;
       setSpeedUp(false);
     }
@@ -351,9 +402,7 @@ export function Editor({ state, tag }: EditorProps) {
             className={`speed ${speedUp ? "sped-up" : ""}`}
             onPointerDown={(e) => {
               if (pointerId.current === null && lastPlayingVideo.current) {
-                Object.values(videoRefs.current).forEach(
-                  (video) => (video.playbackRate = 2)
-                );
+                lastPlayingVideo.current.playbackRate = 2;
                 pointerId.current = e.pointerId;
                 e.currentTarget.setPointerCapture(e.pointerId);
                 setSpeedUp(true);
