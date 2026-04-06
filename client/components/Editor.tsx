@@ -324,6 +324,7 @@ export function Editor({ state, tag }: EditorProps) {
         </div>
         <div className="vidcontrols">
           <button
+            title={playing ? "Pause" : "Play"}
             onClick={() => {
               setPlaying(!playing);
               if (!playing && time >= totalDuration) {
@@ -348,6 +349,7 @@ export function Editor({ state, tag }: EditorProps) {
             {formatMmSs(time)} / {formatMmSs(totalDuration)}
           </span>
           <button
+            title="Fast forward"
             className={`speed ${speedUp ? "sped-up" : ""}`}
             onPointerDown={(e) => {
               if (pointerId.current === null && lastPlayingVideo.current) {

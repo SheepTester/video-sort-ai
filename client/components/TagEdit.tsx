@@ -15,7 +15,7 @@ export function TagEdit({ video, hideSize }: TagEditProps) {
       {video.tags.toSorted().map((tag) => (
         <div className="tag" key={tag} data-tag={tag}>
           {tag}
-          <button onClick={() => removeTag(video, tag).then(setState)}>
+          <button title="Remove tag" onClick={() => removeTag(video, tag).then(setState)}>
             &times;
           </button>
         </div>
@@ -23,6 +23,7 @@ export function TagEdit({ video, hideSize }: TagEditProps) {
       {video.tags.length === 0 ? (
         <>
           <button
+            title="Add DEL tag"
             className="tag add-tag"
             data-tag="delete"
             onClick={() => addTag(video, "delete").then(setState)}
@@ -30,6 +31,7 @@ export function TagEdit({ video, hideSize }: TagEditProps) {
             + DEL
           </button>
           <button
+            title="Add YT tag"
             className="tag add-tag"
             data-tag="youtube"
             onClick={() => addTag(video, "youtube").then(setState)}
@@ -49,10 +51,11 @@ export function TagEdit({ video, hideSize }: TagEditProps) {
         }}
       >
         <input name="tag" placeholder="add a tag" type="text" list="tags" />
-        <button type="submit">+</button>
+        <button title="Add tag" type="submit">+</button>
       </form>
       {!hideSize && <div className="size">{formatSize(video.size)}</div>}
       <button
+        title="Share"
         onClick={async () => {
           const res = await fetch(getVideoUrl(video));
           const blob = await res.blob();

@@ -101,7 +101,7 @@ function Trimmer_({
       className="modal trimmer-container"
     >
       <form method="dialog" className="trimmer-header">
-        <button type="submit">&lt; back</button>
+        <button title="Back" type="submit">&lt; back</button>
         <h3>trim clip</h3>
       </form>
       <div

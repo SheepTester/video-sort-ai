@@ -135,7 +135,7 @@ export function CookModal({
   return (
     <dialog ref={dialogRef} onClose={onClose} className="modal cook-container">
       <form method="dialog" className="cook-header">
-        <button type="submit">&lt; back</button>
+        <button title="Back" type="submit">&lt; back</button>
         <h3>cook settings</h3>
       </form>
       <form

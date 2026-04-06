@@ -47,6 +47,7 @@ export function ListItem({ video }: ListItemProps) {
           <span>
             {extractFilename(video).replace(".mp4", "") + " "}
             <button
+              title="Delete video"
               onClick={() => {
                 if (confirm(`delete ${extractFilename(video)} fr?`)) {
                   deleteVideo(video).then(setState);
@@ -57,7 +58,7 @@ export function ListItem({ video }: ListItemProps) {
               Delete
             </button>
           </span>
-          <button onClick={handleCopyFilename}>📋</button>
+          <button title="Copy filename" onClick={handleCopyFilename}>📋</button>
         </div>
         <div className="time">
           {fmt.format(video.mtime.secs_since_epoch * 1000)} &middot;{" "}

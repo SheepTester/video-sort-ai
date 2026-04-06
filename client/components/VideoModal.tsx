@@ -27,7 +27,7 @@ export function VideoModal({ open, onClose, video }: VideoModalProps) {
       <div className="topbar">
         {video && <TagEdit video={video} />}
         <form method="dialog" className="closebtnform">
-          <button className="closebtn" type="submit">
+          <button title="Close" className="closebtn" type="submit">
             &times;
           </button>
         </form>
