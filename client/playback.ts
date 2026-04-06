@@ -101,7 +101,7 @@ export function calculatePlaybackDecision(
       } else {
         newState.time = nextTime;
       }
-    } else if (Math.abs(activeVideo.currentTime - expectedTime) > 0.2) {
+    } else if (Math.abs(activeVideo.currentTime - expectedTime) > 0.5) {
       actions.push({ type: "SEEK", thumb: activeThumb, value: expectedTime });
     } else {
       const currentGlobalTime = viewingClip.offset + activeVideo.currentTime - viewingClip.clip.start;

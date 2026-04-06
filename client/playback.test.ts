@@ -173,4 +173,26 @@ test("calculatePlaybackDecision", async (t) => {
     assert.ok(speedAction);
     assert.strictEqual(speedAction.value, 2);
   });
+
+  await t.test("does not loop/seek when active video has naturally advanced up to 0.5s before React processes the update", () => {
+    const clips: Clip[] = [
+      { id: "1", thumb: "vid1", start: 0, end: 10 },
+    ];
+
+    const state: PlaybackState = {
+      time: 0,
+      playing: true,
+      speedUp: false,
+      clips,
+    };
+
+    const videos: VideoState[] = [
+      { thumb: "vid1", currentTime: 0.25, paused: false },
+    ];
+
+    const decision = calculatePlaybackDecision(state, videos);
+
+    assert.ok(!decision.actions.some(a => a.type === "SEEK"));
+    assert.strictEqual(decision.newState?.time, 0.25);
+  });
 });
