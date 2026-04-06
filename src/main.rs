@@ -12,8 +12,10 @@ use hyper::{server::conn::http1, service::service_fn};
 use hyper_util::rt::TokioIo;
 use tokio::{fs, net::TcpListener, sync::RwLock};
 
+use std::sync::atomic::Ordering;
+
 use crate::{
-    common::{DIR_PATH, SharedState, State},
+    common::{DIR_PATH, MAX_CONCURRENT_FFMPEG, SharedState, State},
     fmt::{bold, code, link},
     http_handler::handle_request_wrapper,
     register::add_videos,
@@ -82,12 +84,40 @@ async fn main() -> MyResult<()> {
     }));
 
     let (program_name, command, add_path) = {
-        let mut args = std::env::args();
-        (
-            args.next().unwrap_or_else(|| String::from("./video-sort")),
-            args.next(),
-            args.next(),
-        )
+        let mut args: Vec<String> = std::env::args().collect();
+        let program_name = if args.is_empty() {
+            String::from("./video-sort")
+        } else {
+            args.remove(0)
+        };
+
+        let mut i = 0;
+        while i < args.len() {
+            if args[i] == "-j" || args[i] == "--jobs" {
+                if i + 1 < args.len() {
+                    let num = args[i + 1]
+                        .parse::<usize>()
+                        .expect("Invalid number for --jobs");
+                    MAX_CONCURRENT_FFMPEG.store(num, Ordering::Relaxed);
+                    args.remove(i);
+                    args.remove(i);
+                    continue;
+                } else {
+                    eprintln!("Missing value for --jobs");
+                    exit(2);
+                }
+            } else if args[i].starts_with("--jobs=") {
+                let parts: Vec<&str> = args[i].splitn(2, '=').collect();
+                let num = parts[1].parse::<usize>().expect("Invalid number for --jobs");
+                MAX_CONCURRENT_FFMPEG.store(num, Ordering::Relaxed);
+                args.remove(i);
+                continue;
+            }
+            i += 1;
+        }
+
+        let mut args_iter = args.into_iter();
+        (program_name, args_iter.next(), args_iter.next())
     };
 
     match command.as_deref() {
@@ -144,6 +174,11 @@ async fn main() -> MyResult<()> {
             eprintln!("| Display information about this software.");
             eprintln!("$ {}", code(&format!("{program_name} help")));
             eprintln!("| Display this list.");
+            eprintln!(
+                "$ {}",
+                code(&format!("{program_name} -j <num>, --jobs <num>"))
+            );
+            eprintln!("| Set the maximum number of concurrent ffmpeg processes (default: 4).");
         }
         Some("about") => {
             eprintln!(

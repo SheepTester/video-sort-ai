@@ -5,9 +5,11 @@ use tokio::{fs, sync::RwLock};
 
 use crate::util::MyResult;
 
+use std::sync::atomic::AtomicUsize;
+
 pub const DIR_PATH: &str = "./.video-sort";
 /// my phone has 2 Gold and 6 Silver cores apparently so I'll hope it uses the silver one to save the gold for the rest of my phone's brain cells
-pub const MAX_CONCURRENT_FFMPEG: usize = 4;
+pub static MAX_CONCURRENT_FFMPEG: AtomicUsize = AtomicUsize::new(4);
 
 pub type SharedState = Arc<RwLock<State>>;
 
