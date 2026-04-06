@@ -195,4 +195,26 @@ test("calculatePlaybackDecision", async (t) => {
     assert.ok(!decision.actions.some(a => a.type === "SEEK"));
     assert.strictEqual(decision.newState?.time, 0.25);
   });
+
+  await t.test("does not seek when sped up and active video is further ahead", () => {
+    const clips: Clip[] = [
+      { id: "1", thumb: "vid1", start: 0, end: 10 },
+    ];
+
+    const state: PlaybackState = {
+      time: 0,
+      playing: true,
+      speedUp: true,
+      clips,
+    };
+
+    const videos: VideoState[] = [
+      { thumb: "vid1", currentTime: 0.8, paused: false },
+    ];
+
+    const decision = calculatePlaybackDecision(state, videos);
+
+    assert.ok(!decision.actions.some(a => a.type === "SEEK"));
+    assert.strictEqual(decision.newState?.time, 0.8);
+  });
 });
