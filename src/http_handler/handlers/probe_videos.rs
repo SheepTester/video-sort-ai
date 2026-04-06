@@ -39,7 +39,9 @@ pub async fn handle(req: Req, state: SharedState) -> MyResponse {
             request.tag,
         ))
     );
-    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FFMPEG));
+    let semaphore = Arc::new(Semaphore::new(
+        MAX_CONCURRENT_FFMPEG.load(std::sync::atomic::Ordering::Relaxed),
+    ));
     let handles = videos
         .into_iter()
         .map(|video| {

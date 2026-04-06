@@ -49,7 +49,9 @@ pub async fn handle(req: Req, state: SharedState) -> MyResponse {
     );
 
     let (tx, rx) = mpsc::channel::<std::io::Result<Bytes>>(100);
-    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FFMPEG));
+    let semaphore = Arc::new(Semaphore::new(
+        MAX_CONCURRENT_FFMPEG.load(std::sync::atomic::Ordering::Relaxed),
+    ));
     let clips = {
         let state = state.read().await;
         request

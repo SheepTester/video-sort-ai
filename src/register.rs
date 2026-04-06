@@ -28,7 +28,9 @@ pub async fn add_videos(path: &str, state: SharedState) -> MyResult<()> {
         }
     }
 
-    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_FFMPEG));
+    let semaphore = Arc::new(Semaphore::new(
+        MAX_CONCURRENT_FFMPEG.load(std::sync::atomic::Ordering::Relaxed),
+    ));
     let handles = paths
         .iter()
         .map(|path| {
