@@ -27,11 +27,11 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           CURRENT_VERSION=$(cargo pkgid | cut -d "#" -f2 | cut -d "@" -f2)
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           # Only bump version if needed
           if [ "$CURRENT_VERSION" != "${{ github.event.inputs.version }}" ]; then
             sed -i "s/^version = .*/version = \"${{ github.event.inputs.version }}\"/" Cargo.toml
-            git config --global user.name 'github-actions[bot]'
-            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
             git commit -am "Bump version to ${{ github.event.inputs.version }}"
             git push
           fi
